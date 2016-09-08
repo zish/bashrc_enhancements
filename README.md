@@ -1,6 +1,9 @@
 # bashrc_enhancements
 Some useful functions, shortcuts, and enhancements to add to your .bashrc (or .bash_profile).
 
+Current functions are called *addpath*, *sudo*, and *tar*.
+*sudo* and *tar* are "intercept" functions, which are used to add functionality to existing commands of the same name.
+
 ## addpath - Keep your PATH clean.
 
 This function will (intelligently) add a directory to your PATH, with conditions:
