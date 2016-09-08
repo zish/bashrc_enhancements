@@ -5,6 +5,8 @@
 #
 # Source-code, documentation and revision Git repository: https://github.com/zish/bashrc_enhancements
 #
+# Last-Modified: 2016-09-08
+#
 # $ git clone https://github.com/zish/bashrc_enhancements
 #
 # To use this, source the file from your .bashrc (or .bash_profile).
