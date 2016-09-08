@@ -1,0 +1,79 @@
+#-- Add a directory to PATH, but make sure it exists.
+# - If it already exists, change location or remove it. Repeated entries are condensed as well.
+#
+# Author: Jeremy Melanson
+#
+# Source-code, documentation and revision Git repository: https://github.com/zish/bashrc_enhancements
+#
+# $ git clone https://github.com/zish/bashrc_enhancements
+#
+# To use this, source the file from your .bashrc (or .bash_profile).
+#
+#-- Syntax examples:
+# "addpath /usr/bin first"       - Adds "/usr/bin" to the beginning of PATH.
+# "addpath /usr/local/sbin"      - Adds "/usr/local/sbin" to the end of PATH.
+# "addpath /usr/local/sbin"      - Repeat of the previous to illustrate that duplicates do not get added.
+# "addpath ${HOME}/foo first"    - Adds "foo" from your home directory (Ex. "/home/zish/foo") to the beginning of PATH.
+# "addpath ${HOME}/bar remove"   - Removes any references to "${HOME}/bar" (Ex. "/home/zish/foo") from PATH.
+#
+#-- Results:
+# - If the original value of PATH was "/bin:/usr/bin:/home/zish/bar"...
+# ... and "/home/zish/foo" exists, the end result would be "/home/zish/foo:/bin:/usr/bin:/usr/local/sbin".
+# ... and "/home/zish/foo" does not exist, the end result would be "/bin:/usr/bin:/usr/local/sbin".
+#
+#
+# This file is part of bashrc_enhancements.
+#
+#    bashrc_enhancements is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    bashrc_enhancements is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
+
+addpath () {
+   local NEW=${1}
+   local PPOS=; [[ ${2} ]] && PPOS=${2}
+   local VERB=${3}   # Add a little verbosity if this is nonzero.
+   verb () { [[ ${VERB} ]] && echo "-- ${1}."; }
+   join () { local IFS=":"; echo "${*}"; }
+   #-- Read PATH into an array...
+   local PATHDIRS=(); local OIFS=${IFS}; IFS=':' read -a PATHDIRS <<< "${PATH}"; IFS=${OIFS}
+   #-- Enable the use of embedded regular expressions (if not already set)
+   #shopt -s extglob
+   #-- Remove trailing '/', if it exists.
+   if [[ "${NEW}" =~ (.+)\/$ ]]; then NEW="${BASH_REMATCH[1]}"; fi
+   #-- Make sure the directory exists, and that it wasn't already added to PATH.
+   if [ ! -d ${NEW} ]; then
+      verb "${NEW} does not exist or is not a directory"
+      if [ "${PPOS}" != "remove" ]; then return
+      else verb "Removal of ${NEW} requested. Continuing with task."; fi
+   fi
+   local C=0; while [ ${C} -lt ${#PATHDIRS[@]} ]; do
+      local E=${PATHDIRS[${C}]}
+      if [ "${E}" = "${NEW}" ]; then
+         verb "${NEW} pre-existing in PATH. Removing it from its current location."
+         PATHDIRS[${C}]=""
+      fi
+      C=$((${C} + 1))
+   done;
+   if [ "${PPOS}" = "first" ]; then
+      PATHDIRS=(${NEW} ${PATHDIRS[@]})
+      PATH="$(join ${PATHDIRS[@]})"
+      verb "Added ${NEW} to beginning of PATH"
+   elif [ "${PPOS}" = "remove" ]; then
+      verb "Removal of ${NEW} requested. Not re-adding to PATH."
+      PATH="$(join ${PATHDIRS[@]})"
+   else
+      PATHDIRS=(${PATHDIRS[@]} "${NEW}")
+      PATH="$(join ${PATHDIRS[@]})"
+      verb "Added ${NEW} to end of PATH"
+   fi
+   export PATH
+} # END addpath ()
