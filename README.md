@@ -19,26 +19,29 @@ __Available options:__
 * The original value of PATH is "/bin:/usr/bin:/home/zish/bar" ("/home/zish" being the HOME directory).
 ```
 addpath /usr/bin first
-* Value of PATH becomes "/usr/bin:/bin:/home/zish/bar".
+* _Value of PATH becomes "/usr/bin:/bin:/home/zish/bar"._
 addpath /usr/local/sbin
-* Value of PATH becomes "/usr/bin:/bin:/home/zish/bar:/usr/local/sbin".
+* _Value of PATH becomes "/usr/bin:/bin:/home/zish/bar:/usr/local/sbin"._
 addpath /usr/local/sbin
-* Value of PATH _remains_ "/usr/bin:/bin:/home/zish/bar:/usr/local/sbin".
+* _Value of PATH _remains_ "/usr/bin:/bin:/home/zish/bar:/usr/local/sbin"._
 addpath ${HOME}/bar remove
-* Value of PATH becomes "/usr/bin:/bin:/usr/local/sbin".
+* _Value of PATH becomes "/usr/bin:/bin:/usr/local/sbin"._
 addpath ${HOME}/foo first
-* If "${HOME}/foo" exists, PATH becomes "/usr/bin:/bin:/usr/local/sbin:/home/zish/foo".
-* If "${HOME}/foo" does not exist, PATH remains "/usr/bin:/bin:/usr/local/sbin".
+* _If "${HOME}/foo" exists, PATH becomes "/usr/bin:/bin:/usr/local/sbin:/home/zish/foo"._
+* _If "${HOME}/foo" does not exist, PATH remains "/usr/bin:/bin:/usr/local/sbin"._
 ```
 
 ### Installation:
 
 *Simple method:*
+
 Copy the contents of this repo to ${HOME}/.bashrc_enhancements
 Add the text ". ${HOME}/.bashrc_enhancements/bashrc" on a blank line in your .bashrc (or .bash_profile)
 near the beginning of the file.
 
+
 *Portable method:*
+
 The simple method requires that ${HOME}/.bashrc_enhancements be made available on any system that you
 wish to use it on. As an alternative, the contents of any file under ${HOME}/.bashrc_enhancements/files
 can be added directly to your .bashrc file.
@@ -46,16 +49,16 @@ can be added directly to your .bashrc file.
 
 ### License:
 
-bashrc_enhancements is free software: you can redistribute it and/or modify
+_bashrc_enhancements_ is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-bashrc_enhancements is distributed in the hope that it will be useful,
+_bashrc_enhancements_ is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Affero General Public License for more details.
 
 A copy of the GNU Affero General Public License should be provided along
-with bashrc_enhancements. If not, see <http://www.gnu.org/licenses/>.
+with _bashrc_enhancements_. If not, see <http://www.gnu.org/licenses/>.
 
