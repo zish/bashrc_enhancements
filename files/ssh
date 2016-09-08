@@ -1,0 +1,226 @@
+#-- SSH interception subroutine with a lot of great functionality.
+# This was written originally to eliminate the need to copy or clone a custom .bashrc to remote systems,
+#
+# Author: Jeremy Melanson
+#
+# Source-code, documentation and revision Git repository: https://github.com/zish/bashrc_enhancements
+#
+# Last-Modified: 2016-09-08
+#
+# $ git clone https://github.com/zish/bashrc_enhancements
+#
+# To use this, source the file from your .bashrc (or .bash_profile).
+#
+#
+# Features:
+#		* Allows you to take your PS1 prompt with you.
+#			- Prepends the remote prompt with "(SSH)", to visually indicate that it is an SSH session.
+#		* Any aliases defined locally at run time will be defined in your remote session automatically.
+#		* Select embedded functions can be cloned to your remote SSH session, by adding them to ADDSUBS, (defined below),
+#		* Specific ranges of ines in your .bashrc can be cloned to your remote SSH session, using
+#			a special '# [SSH_INCLUDE nn]' remarkbefore the lines without needing to copy them everywhere.
+#
+# CAVEATS for subroutines:
+#		* Subroutine START ( subrout () { )   and END ( } ) declarations MUST BE on a single line, at the beginning of the line.
+#		* Any embedded subroutines within MUST HAVE their beginning and end declarations prepended with some whitespace.
+#
+#
+# This file is part of bashrc_enhancements.
+#
+#    bashrc_enhancements is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    bashrc_enhancements is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+#-- This is a very nice, colorized 2-line prompt. ** It is not required for this facility to properly operate,
+# but I have included it in case someone else might find it useful. Uncomment the following line to use it.
+#PS1="\[\033[0;37m\]\342\224\214\342\224\200\$([[ \$? != 0 ]] && echo \"[\[\033[0;31m\]\342\234\227\[\033[0;37m\]]\342\224\200\")[$(if [[ ${EUID} == 0 ]]; then echo '\[\033[0;31m\]\h'; else echo '\[\033[0;33m\]\u\[\033[0;37m\]@\[\033[0;96m\]\h'; fi)\[\033[0;37m\]]\342\224\200[\[\033[0;32m\]\w\[\033[0;37m\]]\n\[\033[0;37m\]\342\224\224\342\224\200\342\224\200\342\225\274 \[\033[0m\]"
+
+ssh () {
+#-- Modification of any variables within this section requires you to restart your terminal session (or 'source' your rc file).
+	#-- Add the following functions below (if they have been defined in the current running session)..
+	local ADDSUBS="sudo ssh tar addpath"
+	#-- Be explicit about environment variables that you want to use on remote systems..
+	local ENVVARS="HISTCONTROL HISTFILESIZE HISTTIMEFORMAT PROMPT_COMMAND"
+	#-- Remote PS1 Prompt.
+	# We want to identify if we are in an SSH session. This prepends local PS1 with a red, bold SSH between parentheses.
+	local RPS1="\[\033[1;1m\](\[\033[1;31m\]SSH\[\033[0;1m\])\[\033[0;37m\]${PS1}"
+	#-- Uncomment this if you do not want ANY modifications to your PS1, but still use it on a remote system.
+	#RPS1=${PS1}
+	#-- SSH Config files
+	# - Local User config
+	local SSH_UC=~/.ssh/config
+	# - System-wide config
+	# Omitting SSH_MC (main cnf) avoids the need to override "host *" in the user config
+	# Don't uncomment this, unless you understand the above statement
+	#local SSH_MC=/etc/ssh/ssh_config
+	#-- Enable logging by default. Comment this out if you want the opposite behavior.
+	# This is disabled on remote SSH hosts when shipping this subroutine.
+	local LOG_BY_DEF=1
+	#-- Log file location. Log file names will be formatted as 'HOST-YYYY-MM-DD_HH-MM-SS.log'.
+#	local LOG_LOC="${HOME}/Documents/ssh_logs"
+	local LOG_LOC="${HOME}/ssh_logs"
+
+#-- *** You should not need to modify below this line ***
+
+	#-- Determine SSH hostname and scan SSH config(s). Ignore a config file if not found.
+	scancnf(){
+		#-- $1 is user config. $2 is main config. The rest are SSH options (for us to get Host from).
+		local CF=(); local OP=()
+		[[ -f "${1}" ]] && CF=(${1})
+		[[ -f "${2}" ]] && CF=(${CF} ${2})
+		local C=0; for O in ${*}; do
+			[[ ${C} -ge ${#CF[@]} ]] && OP=(${OP[@]} ${O})
+			C=$(( ${C} + 1 ))
+		done
+
+		#-- SSH Command line option knowledge.
+		# These are the known options for my current version of OpenSSH (v.7.2p2):
+		# If you use another SSH tool with different options, you may be able to just set them here.
+		# ** Please let me know if you get a different version to work. I may incorporate it in a future version of this tool.
+		# Opts that do not take an argument.
+		export CLI_SW="1246AaCfGgKkMNnsTtVvXxYy";
+		# Opts that take an argument.
+		export CLI_OPT="bcDEeFIiLlmOopQqRSWw";
+
+		cat ${CF[@]} | perl -e '$sh="";
+		#-- These were defined as envvars to make things easier for others.
+		$clisw="^\\-[".$ENV{CLI_SW}."]"; $cliopt="^\\-[".$ENV{CLI_OPT}."]";
+		while(my $op = shift(@ARGV)){
+			if($op =~ /$cliopt/){shift(@ARGV);}elsif(!($op =~ /$clisw/)){$sh=$op;}}
+		#-- Decouple the user@ prefix. Output them as separate items.
+		if($sh=~s/^(\w+)\@//){print "local SSH_USER=".$1."\n";}
+		print "local SSH_HOST=".$sh."\n";
+		while(<STDIN>){$p=$_;
+			my %rgxt=("\\."=>"\\.","\\*"=>".*","\\?"=>".");
+			my %rgxt=("\\."=>"\\.","\\*"=>".*","\\?"=>".");
+			if($p=~/^\s*host\s+([^\#]+)\#?([^\#]*)$/i){ #-- only want host lines
+				$ch=$1;$a=$2;
+				@h=($ch=~/([^\s\,]+)/g);
+				foreach $H(@h){
+					foreach my $e(sort{$b cmp $a}(keys(%rgxt))){ #-- Escape wildcard types
+						$H=~s/$e/$rgxt{$e}/g; }
+						$H="^($H)\$";
+					if ($sh =~ /$H/) {
+						print "local FOUND=".$sh."\n";
+						@O=split(/\s*\,\s*/,$a);
+						print "local LOG=1\n"if(grep(/^LOG$/, @O));
+						print "local NOLOG=1\n"if(grep(/^NOLOG$/, @O));
+						print "local NOPROMPT=1\n" if(grep(/^NOPROMPT$/,@O));
+						print "local PROMPTONLY=1\n" if(grep(/^PROMPTONLY$/,@O));
+						exit;
+		}	}	}	}' -- ${OP[@]}
+		unset CLI_SW CLI_OPT
+	} # END scancnf
+	eval "$(scancnf ${SSH_UC} ${SSH_MC} ${@})"
+
+	#-- Log file format definition.
+	local LOG_FMT="${SSH_HOST}-$(date +%Y-%m-%d_%H-%M-%S).log"
+
+	#-- Default base64 encode and decode commands for different platforms.
+	local BASE64_ENC=; local BASE64_DEC=
+	local PF='UN=$(which uname);[ -n "${UN}" ] && { [ -x ${UN} ] && { PL=$(${UN} -a);
+	[[ ${PL} =~ ^Darwin ]] && { BASE64_ENC="base64 -i -";BASE64_DEC="base64 -D -i -"; };
+	[[ ${PL} =~ ^Linux|Cygwin ]] && { BASE64_ENC="base64 -w 0";BASE64_DEC="base64 -di";} } }'; eval "${PF}"
+
+	#-- Determine if we should be logging.
+	if [ -n "${LOG_BY_DEF}" ]; then
+		#-- Unsetting LOG, just in case both LOG and NOLOG were set on the same Host.
+		[[ -n "${NOLOG}" ]] && unset LOG || LOG=1
+	elif [ -z "${LOG_BY_DEF}" ] && [ -n "${LOG}" ]; then LOG=1; fi
+	#-- Make sure log  location is writable.
+	if [ -n "${LOG}" ]; then
+		local LOG_FILE="${LOG_LOC}/${LOG_FMT}"
+		touch ${LOG_FILE} 2>/dev/null || local ERR=1
+		if [ -n "${ERR}" ]; then
+			echo "****************"
+			echo -e "WARNING: Unable to write to file:\n   ${LOG_FILE}.\nSession will not be logged."
+			echo -e "****************\n"
+			unset LOG_FILE; fi; fi
+	#-- Skip prompt and rc file shipping, if NOPROMPT was set in SSH config.
+	[[ -n "${NOPROMPT}" ]] && unset FOUND;
+
+	#-- Pull requested functions defined by ${ADDSUBS}.
+	getrc () {
+		set | /usr/bin/perl -e '
+			$rc=shift(@ARGV); my %addSubs;
+			foreach my $f(@ARGV){$addSubs{$f} = 1;}
+			my $b; foreach my $l(<STDIN>){
+				#-- $b stands for {b}rackets, and makes sure to record whole functions.
+				if($l=~/^\s*(\S+)\s+\([^\(\)]*\)\s*$/){$b=$1;}
+				print $l if($addSubs{$b});
+				$b=undef if($l=~/^\}\s*([\;\#]?.*)/);}
+			my $rcFh;open($rcFh,"<",$rc)||die("Cannot open rc file $rc: ".$!);
+			my @rc=<$rcFh>;close($rcFh);
+			#-- Grab sections of .bashrc marked by [SSH_INCLUDE] remarks.
+			my ($i,$c,$incPos);
+			foreach my $l(@rc){
+				if ($l=~/^\s*\#\s*\[SSH_INCLUDE\]\s+(\d+)/){$i=$1;}
+				if ($i){ if($c<=$i){print$l;$c++;}else{$c=0;$i=0;}}}' -- ${@}
+	} # END getrc
+
+	#-- Parse things if we have a matched entry in the SSH config.
+	if [ -n "${FOUND}" ];then
+		#-- The rcfile to use remotely. Regenerates every time you log in.
+		# ~/.bashrc will be called at the end. Overrides can be defined on the remote.
+		local RCPUSH="~/.bashrc_pushed-${USER}"
+		#-- Add an alias to bash (use your customized bash env).
+		local USH="alias bash='/bin/bash --rcfile ~/.bashrc_pushed-${RCPUSH}'"
+		#-- Start defining contents of remote RC file
+		local RBASHRC="export PS1=\"${RPS1}\";if [ -e ~/.bash_profile ];then . ~/.bash_profile;elif [ -e ~/.bashrc ];then . ~/.bashrc; elif [ -e ~/.profile ]; then . ~/.profile; fi"
+		local RBASHRC_ENC
+		#-- We can specify PROMPTONLY on a host in .ssh/config. Set things accordingly.
+		if [ -n "${PROMPTONLY}" ]; then
+			echo "Connecting to ${FOUND} local PS1 only."
+		else
+			echo "Connecting to ${FOUND} with local shell definitions."
+			#-- Gather aliases.
+			local ALI=
+			local OIFS=${IFS}; IFS=$'\n'; for A in $(alias); do ALI="${ALI}${A};"; done; IFS=${OIFS}
+			#-- Pull directly from pushed items if in SSH session (IS_SSH).
+			local RC=
+			#-- Use ${RCPUSH} file if in an SSH session. Allows you to reuse your shipped stuff when
+			# using ssh on remote systems.
+			# ** This only matters when ssh is included in ${ADDSUBS}.
+			if [ -n "${IS_SSH}" ] && [ -e "${RCPUSH}" ];then RC="${RCPUSH}"
+			# Use local rc if non-SSH
+			elif [ -e "${HOME}/.bashrc" ];then RC="${HOME}/.bashrc"
+			elif [ -e "${HOME}/.bash_profile" ];then RC="${HOME}/.bash_profile"; fi
+			#-- Retrieve ADDSUBS functions and [SSH_INCLUDE] lines.
+			# Functions need to be decoded before 'source'ing them (for some reason). Decoded output is
+			# piped to ${RCPUSH}.funcs file, which is sourced from the pushed bashrc file.
+			local RFUNCS="$(getrc ${RC} ${ADDSUBS})"
+			local RFUNCS_ENC="sleep 0.2; export IS_SSH=1;echo "$(echo "${RFUNCS}"|${BASE64_ENC})"|\${BASE64_DEC}>${RCPUSH}.funcs;. ${RCPUSH}.funcs"
+			RBASHRC_ENC="${PF};${ALI}${RFUNCS_ENC};${RBASHRC}" #;\\\$(echo \\\""
+			RBASHRC_ENC=${RBASHRC_ENC//\$/\\$}; RBASHRC_ENC=${RBASHRC_ENC//\"/\\\"}
+		fi
+
+		unset UN PL BASE64_ENC BASE64_DEC
+		local SSH_REMCMD="echo \"${RBASHRC_ENC}\">${RCPUSH};exec bash --rcfile ${RCPUSH}"
+		if [ -n "${LOG_FILE}" ]; then /usr/bin/ssh $@ -t "${SSH_REMCMD}"|tee -i ${LOG_FILE}
+		else /usr/bin/ssh $@ -t "${SSH_REMCMD}"; fi
+	else
+		#-- No match found in config. Just run SSH command
+		if [ -n "${LOG_FILE}" ]; then /usr/bin/ssh $@|tee -i ${LOG_FILE}
+		else /usr/bin/ssh $@; fi
+	fi
+
+	echo "------------------------------------------------"
+	if [ -n "${LOG}" ]; then
+		if [ -n "${LOG_FILE}" ]; then
+			#-- Report the log file name, if it is not zero-length. Otherwise remove the file.
+			if [ -s "${LOG_FILE}" ]; then echo "Session logged to ${LOG_FILE}"
+			else echo "No output logged from session. Removing ${LOG_FILE}"; rm "${LOG_FILE}"; fi
+		else echo "WARNING: Logging is enabled, but unable to write to log file."; fi
+	fi
+} # END ssh
