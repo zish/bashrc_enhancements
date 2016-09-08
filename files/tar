@@ -1,0 +1,40 @@
+#-- Tar interception command. Suppresses annoying "SCHILY" messages when extracting a TAR archive originating from a MacOS system.
+# This is primarily intended for Linux systems, but can be used for any system with GNU/Tar.
+# This cuts down the amount of output echoed to your terminal or output log,
+# and is expecially useful when extracting a tar file from MacOS with a lot of files.
+#
+# Author: Jeremy Melanson
+#
+# Source-code, documentation and revision Git repository: https://github.com/zish/bashrc_enhancements
+#
+# Last-Modified: 2016-09-08
+#
+# $ git clone https://github.com/zish/bashrc_enhancements
+#
+# To use this, source the file from your .bashrc (or .bash_profile).
+#
+#
+# This file is part of bashrc_enhancements.
+#
+#    bashrc_enhancements is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    bashrc_enhancements is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
+
+tar () {
+   local TARBIN=$(which tar); local OPTS=${@}; local STDERR=$( { ${TARBIN} ${OPTS}; } 2>&1 );
+   local OIFS=${IFS}; IFS=$'\n'
+   for ERR in ${STDERR}; do
+      if [[ ! ${ERR} =~ .*[Hh]eader\ [Kk]eyword\ [\"\']SCHILY.* ]]; then echo "ERR: ${ERR}"; fi
+   done
+   IFS=${OIFS}
+} # END tar ()
+

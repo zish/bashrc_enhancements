@@ -31,7 +31,29 @@ addpath ${HOME}/foo first
 * _If "${HOME}/foo" does not exist, PATH remains "/usr/bin:/bin:/usr/local/sbin"._
 ```
 
-### Installation:
+## sudo - SUDO interception command. This allows you to use available aliases with the sudo command.
+
+This will intercept the "sudo" command. If the command executed by sudo matches a defined alias, it will execute the contents of the alias instead.
+
+### Examples:
+
+_In .bashrc:_
+
+alias tlog='tail -100 /var/log/syslog'
+
+Normally this alias would need to be defined in root's .bashrc file to be used. Even still, there may be security controls restricting what may be available from a sudo command, or tools that manage the integrity of root's .bashrc entirely. Thus running "sudo tlog" would fail with a "command not found" error.
+
+The sudo intercept function instead will rewrite the sudo command appropriately. The command "sudo tlog" gets invoked as "sudo tail -100 /var/log/syslog".
+
+
+## tar - Tar interception command. Suppresses annoying "SCHILY" messages when extracting a TAR archive originating from a MacOS system.
+
+This is primarily intended for Linux systems, but can be used for any system with GNU/Tar.
+This cuts down the amount of output echoed to your terminal or output log,
+and is expecially useful when extracting a tar file from MacOS with a lot of files.
+
+
+## Installation:
 
 *Simple method:*
 
@@ -47,7 +69,7 @@ wish to use it on. As an alternative, the contents of any file under ${HOME}/.ba
 can be added directly to your .bashrc file.
 
 
-### License:
+## License:
 
 _bashrc_enhancements_ is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
