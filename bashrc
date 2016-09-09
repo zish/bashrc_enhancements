@@ -22,6 +22,15 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
+#-- Invoke 
+loadfiles () {
+	DIR=${1}
+} # END loadfiles
+
+
+#-- Will be populated with names from the 'files' dir that have been loaded.
+declare -A ENHANCEMENTS_LOADED
+
 for F in ${HOME}/.bashrc_enhancements/files/*; do
 	. ${F}
 done

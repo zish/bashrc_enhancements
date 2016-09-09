@@ -1,0 +1,63 @@
+#-- This holds the configuration for the SSH interception subroutine.
+# The SSH intercept appends this subroutine to its SSHI_ADD_SUBS variable, so it can be used remotely.
+
+# Author: Jeremy Melanson
+#
+# Source-code, documentation and revision Git repository: https://github.com/zish/bashrc_enhancements
+#
+# Last-Modified: 2016-09-08
+#
+# $ git clone https://github.com/zish/bashrc_enhancements
+#
+#
+# This file is part of bashrc_enhancements.
+#
+#    bashrc_enhancements is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    bashrc_enhancements is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
+
+
+sshiconf () {
+#-- DO NOT REMOVE FOLLOWING LINE:
+while read -r L;do echo ${L}; done << EOF
+#--------------------------------------------
+
+ #-- Add the following functions below (if they have been defined in the current running session)..
+ # ** Remember to include 'sshiconf' in the list, if you want to use these settings with
+ # ** the SSH intercept on a remote session.
+ local SSHI_ADD_SUBS="sudo ssh sshiconf tar addpath"
+
+ #-- Remote PS1 Prompt.
+ # We want to identify if we are in an SSH session. This prepends local PS1 with a red, bold SSH between parentheses.
+ local RPS1="\[\033[1;1m\](\[\033[1;31m\]SSH\[\033[0;1m\])\[\033[0;37m\]${PS1}"
+ #-- Uncomment this if you do not want ANY modifications to your PS1, but still use it on a remote system.
+# local RPS1=${PS1}
+
+ #-- SSH Config files
+ # - Local User config
+ local SSH_UC=~/.ssh/config
+ # - System-wide config
+ # Omitting SSH_MC (main cnf) avoids the need to override "host *" in the user config
+ # Don't uncomment this, unless you understand the above statement
+ #local SSH_MC=/etc/ssh/ssh_config
+
+ #-- Enable logging by default. Comment this out if you want the opposite behavior.
+ local LOG_BY_DEF=1
+
+ #-- Log file location. Log file names will be formatted as 'HOST-YYYY-MM-DD_HH-MM-SS.log'.
+# local LOG_LOC="~/Documents/ssh_logs"
+ local LOG_LOC="~/ssh_logs"
+
+#--------------------------------------------
+EOF
+#-- ^^^ LEAVE THE ABOVE EOF HERE
+} # END sshiconf
