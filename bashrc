@@ -22,15 +22,9 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
-#-- Invoke 
-loadfiles () {
-	DIR=${1}
-} # END loadfiles
+export ENHANCEMENTS_ROOT="${HOME}/.bashrc_enhancements"
+export ENHANCEMENTS_ENABLED=("addpath" "ssh" "sshiconf" "sudo" "tar")
 
-
-#-- Will be populated with names from the 'files' dir that have been loaded.
-declare -A ENHANCEMENTS_LOADED
-
-for F in ${HOME}/.bashrc_enhancements/files/*; do
-	. ${F}
+for F in ${ENHANCEMENTS_ENABLED[@]}; do
+	[ -e ${ENHANCEMENTS_ROOT}/files/${F} ] && . ${ENHANCEMENTS_ROOT}/files/${F}
 done
