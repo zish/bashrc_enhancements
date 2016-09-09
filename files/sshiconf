@@ -48,7 +48,7 @@ while read -r L;do echo ${L}; done << EOF
  # - System-wide config
  # Omitting SSH_MC (main cnf) avoids the need to override "host *" in the user config
  # Don't uncomment this, unless you understand the above statement
- #local SSH_MC=/etc/ssh/ssh_config
+# local SSH_MC=/etc/ssh/ssh_config
 
  #-- Enable logging by default. Comment this out if you want the opposite behavior.
  local LOG_BY_DEF=1

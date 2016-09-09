@@ -43,8 +43,8 @@ ssh () {
 	local SSHI_ADD_SUBS="sudo ssh tar addpath"
 	local RPS1="\[\033[1;1m\](\[\033[1;31m\]SSH\[\033[0;1m\])\[\033[0;37m\]${PS1}"
 	local SSH_UC=~/.ssh/config
-	#local SSH_MC=/etc/ssh/ssh_config
-	local LOG_BY_DEF=1 #TODO: This is disabled on remote SSH hosts when shipping this subroutine.
+#	local SSH_MC=/etc/ssh/ssh_config
+	local LOG_BY_DEF=1 #TODO: Disable this when using sub on remote SSH hosts.
 	local LOG_LOC="~/Documents/ssh_logs"
 
 	#-- Get the configuration fron sshiconf, if available.
