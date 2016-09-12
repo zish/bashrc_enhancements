@@ -153,7 +153,6 @@ EOF
   local SSHREMCMD= #-- SSH Remote command to execute for the session.
   #-- We can specify PROMPTONLY on a host in .ssh/config. Set things accordingly.
   [ -n "${PROMPTONLY}" ]&&{
-#   local SSHREMCMD="echo \"${RBASHRC_E}\">~/${RCPUSH};exec bash --rcfile ~/${RCPUSH}"
    [ -n "${SSHI_RPS1}" ]&& {
     echo -e "Connecting to ${FOUND} with local prompt.\n"
     SSHREMCMD="export PS1=\"${SSHI_RPS1}\";exec bash"
