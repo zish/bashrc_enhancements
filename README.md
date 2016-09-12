@@ -14,12 +14,13 @@ __Available options:__
 *The following arguments are optional:*
 * first  - Add the entry before all other entries in PATH.
 * remove - Remove any references to the entry from PATH.
-* _If no options are specified, the entry is appended to the end of PATH._
 
+### See README.ssh.md file for how to use this intercept function.
+* _If no options are specified, the entry is appended to the end of PATH._
 
 ### Syntax examples:
 *SCENARIO:*
-* The original value of PATH is "/bin:/usr/bin:/home/zish/bar" ("/home/zish" being the HOME directory).
+* The original value of PAbring it with you to remote SSH sessions.
 ```
 addpath /usr/bin first
 * _Value of PATH becomes "/usr/bin:/bin:/home/zish/bar"._
@@ -33,6 +34,21 @@ addpath ${HOME}/foo first
 * _If "${HOME}/foo" exists, PATH becomes "/usr/bin:/bin:/usr/local/sbin:/home/zish/foo"._
 * _If "${HOME}/foo" does not exist, PATH remains "/usr/bin:/bin:/usr/local/sbin"._
 ```
+
+## ssh - SSH interception subroutine with a lot of great extras.
+
+This was written originally as a mechanism to bring my locally-defined PS1 prompt and  bash aliases with me, so I didn't need to copy them everywhere. It has since had a lot more functionality added to it.
+
+### Features:
+* Define PS1 locally, and have it appear in remote SSH sessions.
+* Use locally-defined aliases in remote SSH sessions.
+* Use locally-defined sunroutines in remote SSH sessions (must be explicity defined).
+* Automaticallly log output from SSH sessions.
+* _Ability to override these options for hosts._
+..* _Overrides are specified as a comment at the end of a 'Host' line that matches the host, in your ~/.ssh/config file._
+
+### See README.ssh.md file for configuration and usage.
+
 
 ## sudo - SUDO interception command. This allows you to use available aliases with the sudo command.
 
