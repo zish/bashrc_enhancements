@@ -15,7 +15,6 @@ __Available options:__
 * first  - Add the entry before all other entries in PATH.
 * remove - Remove any references to the entry from PATH.
 
-### See README.ssh.md file for how to use this intercept function.
 * _If no options are specified, the entry is appended to the end of PATH._
 
 ### Syntax examples:
@@ -42,7 +41,8 @@ This was written originally as a mechanism to bring my locally-defined PS1 promp
 ### Features:
 * Define PS1 locally, and have it appear in remote SSH sessions.
 * Use locally-defined aliases in remote SSH sessions.
-* Use locally-defined sunroutines in remote SSH sessions (must be explicity defined).
+* Use locally-defined subroutines in remote SSH sessions (must be explicity defined).
+* Arbitrarily add sections from your local bashrc as needed.
 * Automaticallly log output from SSH sessions.
 * _Ability to override these options for hosts._
 ..* _Overrides are specified as a comment at the end of a 'Host' line that matches the host, in your ~/.ssh/config file._

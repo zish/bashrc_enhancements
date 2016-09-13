@@ -23,7 +23,7 @@
 #    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
 export ENHANCEMENTS_ROOT="${HOME}/.bashrc_enhancements"
-export ENHANCEMENTS_ENABLED=("addpath" "ssh" "sshiconf" "sudo" "tar")
+export ENHANCEMENTS_ENABLED=("addpath" "ssh" "sudo" "tar")
 
 for F in ${ENHANCEMENTS_ENABLED[@]}; do
 	[ -e ${ENHANCEMENTS_ROOT}/files/${F} ] && . ${ENHANCEMENTS_ROOT}/files/${F}
