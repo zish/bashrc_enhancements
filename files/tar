@@ -30,11 +30,25 @@
 #    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
 tar () {
-   local TARBIN=$(which tar); local OPTS=${@}; local STDERR=$( { ${TARBIN} ${OPTS}; } 2>&1 );
-   local OIFS=${IFS}; IFS=$'\n'
-   for ERR in ${STDERR}; do
-      if [[ ! ${ERR} =~ .*[Hh]eader\ [Kk]eyword\ [\"\']SCHILY.* ]]; then echo "ERR: ${ERR}"; fi
-   done
-   IFS=${OIFS}
+	local STDINSTDOUT=
+	for O in "${@}"; do
+		[ "${O}" = "-" ] && STDINSTDOUT=1
+	done
+   local TARBIN=$(which tar);
+	local OPTS=${@};
+	[ -n "${STDINSTDOUT}" ] && {
+			echo "Piping to/from STDIN/STDOUT. Cannot filter STDERR at this time."
+			${TARBIN} ${OPTS}
+	} || {
+		local STDERR=$( { ${TARBIN} ${OPTS}; } 2>&1 );
+	   local OIFS=${IFS}; IFS=$'\n'
+	   for ERR in ${STDERR}; do
+	      if [[ ! ${ERR} =~ .*[Hh]eader\ [Kk]eyword\ [\"\']SCHILY.* ]]; then
+				echo "ERR: ${ERR}"
+			fi
+	   done
+   	IFS=${OIFS}
+	}
 } # END tar ()
 
+# vim: ft=sh
