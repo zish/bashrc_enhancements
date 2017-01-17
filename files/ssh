@@ -40,7 +40,7 @@
 
 ssh(){
 #-- Modification of any variables within this section requires you to restart your terminal session (or 'source' your rc file).
- #-- Set the configuration defaults, if no global override has been set.
+ #-- Set the configuration defaults, if no global override have been set.
  _defaults(){
   local IFS=$'\n';while read -r L;do
    [[ "${L}" =~ ^[[:blank:]]*\# ]]&&continue; #-- Skip comment lines.
@@ -48,6 +48,7 @@ ssh(){
     echo "[ -z \"\${${BASH_REMATCH[1]}}\" ] && local ${BASH_REMATCH[1]}=${BASH_REMATCH[2]}";}
   done<<EOF
   SSHI_ADD_SUBS="sudo ssh tar addpath"
+  SSHI_INC_FILES=()
   SSHI_RPS1='\[\033[1;1m\](\[\033[1;31m\]SSH\[\033[0;1m\])\[\033[0;37m\]${PS1}'
   SSHI_UC=~/.ssh/config
 #  SSHI_MC=/etc/ssh/ssh_config
@@ -63,6 +64,7 @@ ssh(){
   SSHI_LOG_CMP_BIN=gzip
  # Options to pass to the compression tool:
   SSHI_LOG_CMP_OPTS=-9
+  SSHI_PERL_BIN=/usr/bin/perl
 EOF
  }
 
@@ -131,6 +133,13 @@ EOF
     if($i){if($c<=$i){print$l;$c++;}else{$c=0;$i=0;}}}' -- ${@}
  }
 
+ #-- Package external files for inclusion.
+ _include_files (){
+  for I in "${SSHI_INC_FILES[@]}"; do
+   echo "I: ${I}"
+  done
+ }
+
  eval "$(_defaults)"
  eval "$(_scancnf ${SSHI_UC} ${SSHI_MC} ${@})"
 
@@ -141,10 +150,10 @@ EOF
  [ -n "${SSHI_LOG_BY_DEF}" ]&&{ [ -n "${NOLOG}" ]&& unset LOG NOLOG||LOG=1;}||
  # Do not log by default. Turn on logging when requested.
  { [ -n "${LOG}" ]&& local LOG=1;}
- #-- Make sure log  location is writable.
+ #-- Make sure log location is writable.
  [ -n "${LOG}" ]&&{
   local LOGFILE="${SSHI_LOG_LOC}/${LOGFMT}"
-  touch ${LOGFILE} 2>/dev/null || local ERR=1
+  touch ${LOGFILE} 2>/dev/null|| local ERR=1
   [ -n "${ERR}" ]&&{
    echo "****************"
    echo -e "WARNING: Unable to write to file:\n   ${LOGFILE}.\nSession will not be logged."
@@ -156,7 +165,7 @@ EOF
  #-- Parse things and connect if we have a matched entry in the SSH config.
  [ -n "${FOUND}" ]&&{
   local SSHREMCMD= #-- SSH Remote command to execute for the session.
-  #-- We can specify PROMPTONLY on a host in .ssh/config. Set things accordingly.
+  #-- PROMPTONLY set on a host .ssh/config. Set things accordingly.
   [ -n "${PROMPTONLY}" ]&&{
    [ -n "${SSHI_RPS1}" ]&&{
     echo -e "Connecting to ${FOUND} with local prompt.\n";SSHREMCMD="export PS1=\"${SSHI_RPS1}\";exec bash";}
@@ -210,4 +219,4 @@ EOF
   }||{ echo "WARNING: Logging is enabled, but unable to write to log. Verify  SSHI_LOG_LOC is correct.";} }
 } # END ssh
 
-# vim: filetype=sh
+# vim: filetype=sh tabstop=1 expandtab
