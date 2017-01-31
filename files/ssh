@@ -130,12 +130,15 @@ EOF
  }
 
 #- Clean the SSH Logs dir.
+# Removes .log files smaller than ${SSHI_LOG_MIN_SIZE} and compress .log files
+# older than ${SSHI_LOG_CMP_AGE}.
  _sshi_clean_log_dir (){
   [ -z "${SSHI_LOG_COMPRESS}" ]&&{ return; }
   [ ${SSHI_LOG_COMPRESS} -le 0 ]&&{ return; }
   [ -z "${SSHI_LOG_CMP_AGE}" ]&&{
    echo "SSHI_LOG_COMPRESS set, but age undefined. Cannot compress old logs."; return; }
-  for F in $(find ${SSHI_LOG_LOC} -mtime ${SSHI_LOG_CMP_AGE}|grep -v -e "\.gz$");do
+#  for F in $(find ${SSHI_LOG_LOC} -mtime ${SSHI_LOG_CMP_AGE}|grep -v -e "\.gz$");do
+  for F in $(find ${SSHI_LOG_LOC} -mtime ${SSHI_LOG_CMP_AGE}|grep -e "\.log$");do
    [ $(ls -l ${F}|awk '{print $5}') -lt ${SSHI_LOG_MIN_SIZE} ]&&{ echo "Removing ${F}";rm ${F}; }||
    { echo "Compressing ${F}";${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${F}; }
   done
