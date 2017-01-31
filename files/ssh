@@ -57,11 +57,11 @@ alias __sshi_l="perl -e 'my \$mb=1000;
 ssh(){
 #- Set the configuration defaults, if no global override have been set.
 # ** DO NOT MODIFY THESE DIRECTLY. THEY SHOULD BE DEFINED IN YOUR LOCAL bashrc. **
- _sshi_defaults () { local IFS=$'\n'
+ _sshi_defaults(){ local IFS=$'\n'
   while read -r L;do
    [[ "${L}" =~ ^[[:blank:]]*\# ]]&&continue; #- Skip comment lines.
    [[ "${L}" =~ ^[[:blank:]]*([^\ \t\=]+)[[:blank:]]*\=[[:blank:]]*(.*) ]]&&{
-    echo "[ -z \"\${${BASH_REMATCH[1]}}\" ] && local ${BASH_REMATCH[1]}=${BASH_REMATCH[2]}";}
+    echo "[ -z \"\${${BASH_REMATCH[1]}}\" ]&&local ${BASH_REMATCH[1]}=${BASH_REMATCH[2]}";}
   done<<EOF
   SSHI_ADD_SUBS="sudo ssh tar addpath"
   SSHI_INC_FILES=()
@@ -100,9 +100,9 @@ EOF
   local CF=(); local OP=()
   [ -f "${1}" ]&&CF=(${1})
   [ -f "${2}" ]&&CF=(${CF} ${2})
-  local C=0; for O in ${*}; do
-   [ ${C} -ge ${#CF[@]} ]&& OP=(${OP[@]} ${O})
-   C=$((${C} + 1))
+  local C=0; for O in ${*};do
+   [ ${C} -ge ${#CF[@]} ]&&OP=(${OP[@]} ${O})
+   C=$((${C}+1))
   done
   cat ${CF[@]}|perl -e '
  #- SSH Command line option knowledge.
@@ -132,21 +132,25 @@ EOF
 #- Clean the SSH Logs dir.
 # Removes .log files smaller than ${SSHI_LOG_MIN_SIZE} and compress .log files
 # older than ${SSHI_LOG_CMP_AGE}.
- _sshi_clean_log_dir (){
-  [ -z "${SSHI_LOG_COMPRESS}" ]&&{ return; }
-  [ ${SSHI_LOG_COMPRESS} -le 0 ]&&{ return; }
+ _sshi_clean_log_dir(){
+  local CT="$(date +%s)"
+  [ -z "${SSHI_LOG_COMPRESS}" ]&&{ return;}
+  [ ${SSHI_LOG_COMPRESS} -le 0 ]&&{ return;}
   [ -z "${SSHI_LOG_CMP_AGE}" ]&&{
-   echo "SSHI_LOG_COMPRESS set, but age undefined. Cannot compress old logs."; return; }
-#  for F in $(find ${SSHI_LOG_LOC} -mtime ${SSHI_LOG_CMP_AGE}|grep -v -e "\.gz$");do
-  for F in $(find ${SSHI_LOG_LOC} -mtime ${SSHI_LOG_CMP_AGE}|grep -e "\.log$");do
-   [ $(ls -l ${F}|awk '{print $5}') -lt ${SSHI_LOG_MIN_SIZE} ]&&{ echo "Removing ${F}";rm ${F}; }||
-   { echo "Compressing ${F}";${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${F}; }
+   echo "SSHI_LOG_COMPRESS set, but age undefined. Cannot compress old logs."; return;}
+  local IFS=$'\n'
+  for F in $(find ${SSHI_LOG_LOC} -printf "%Cs %s %p\n"|grep -e "\.log$");do
+   [[ "${F}" =~ ^([0-9]+)\ ([0-9]+)\ (.*) ]]&&{ local D="$(((${CT}-${BASH_REMATCH[1]})/86400))";
+    local S="${BASH_REMATCH[2]}";local L="${BASH_REMATCH[3]}";}
+   [ ${S} -lt ${SSHI_LOG_MIN_SIZE} ]&&{ echo "Removing ${L}";rm ${L};}||
+   { [ ${D} -ge ${SSHI_LOG_CMP_AGE} ]&&{
+     echo "Compressing ${L}";${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${L};} }
   done
  }
 
 #- Pull requested functions defined by SSHI_ADD_SUBS.
 # and lines in rc file marked by [SSHI_INCLUDE XX] remarks.
- _sshi_getrc (){
+ _sshi_getrc(){
   set|/usr/bin/perl -e '$rc=shift(@ARGV);my %addSubs;
    foreach my $f(@ARGV){$addSubs{$f}=1;}
    my $b;foreach my $l(<STDIN>){
@@ -158,19 +162,13 @@ EOF
    my @rc=<$rcFh>;close($rcFh);
   #- Grab [SSHI_INCLUDE] sections in bashrc.
   # * GETS BOTH SSH_INCLUDE AND SSHI_INCLUDE. The former will be deprecated soon.
-   my ($i,$c,$incPos);
-   foreach my $l(@rc){
+   my ($i,$c,$incPos);foreach my $l(@rc){
     if($l=~/^\s*\#\s*\[SSHI?_INCLUDE\]\s+(\d+)/){$i=$1;}
     if($i){if($c<=$i){print$l;$c++;}else{$c=0;$i=0;}}}' -- ${@}
  }
 
 #- Package external files for inclusion.
- _sshi_include_files (){
-  for I in "${SSHI_INC_FILES[@]}"; do
-   echo "I: ${I}"
-  done
- }
-
+ _sshi_include_files(){ for I in "${SSHI_INC_FILES[@]}";do echo "I: ${I}";done;}
  eval "$(_sshi_defaults)"
  eval "$(_sshi_scancnf ${SSHI_UC} ${SSHI_MC} ${@})"
 
@@ -178,8 +176,7 @@ EOF
  local LOGFMT="${SSH_HOST}-$(date +%Y-%m-%d_%H-%M-%S).log"
 #- Determine if we should log.
  [ -n "${SSHI_IS_SSH}" ]&&[ -n "${SSHI_NO_LOG_REMOTE}" ]&&{
-  NOLOG=1
-  unset LOGFILE
+  NOLOG=1;unset LOGFILE
  }||{
  # Log by default. Turn off logging when requested.
   [ -n "${SSHI_LOG_BY_DEF}" ]&&{ [ -n "${NOLOG}" ]&& unset LOG NOLOG||LOG=1;}||
@@ -191,14 +188,11 @@ EOF
   #- Create SSH log directory if needed.
    [ -n "${SSHI_LOG_LOC}" ]&&{ [ -n ${SSHI_CREATE_LOG_LOC} ]&&{
     [ ! -e ${SSHI_LOG_LOC} ]&&{
-     mkdir -p ${SSHI_LOG_LOC}||_sshi_err "Unable to create dir:\n   ${SSHI_LOG_LOC}."
-    }
-   } }
+     mkdir -p ${SSHI_LOG_LOC}||_sshi_err "Unable to create dir:\n   ${SSHI_LOG_LOC}.";} } }
    touch ${LOGFILE} 2>/dev/null||local ERR=1
    [ -n "${ERR}" ]&&{
-    _sshi_err "Unable to write to file:\n   ${LOGFILE}.\nSession will not be logged."
-    unset LOGFILE;}||{ _sshi_clean_log_dir; }
- #unset LOGFILE
+    _sshi_err "Unable to write to file:\n   ${LOGFILE}.\nSession will not be logged.";unset LOGFILE;}||
+   { _sshi_clean_log_dir;}
   }
  }
 
@@ -208,13 +202,11 @@ EOF
  [ -n "${FOUND}" ]&&{
   local SSHREMCMD= #- Holds contents of commands to run on remote host.
  #- PROMPTONLY set on a host .ssh/config. Set things accordingly.
-  [ -n "${PROMPTONLY}" ]&&{
-   [ -n "${SSHI_RPS1}" ]&&{
+  [ -n "${PROMPTONLY}" ]&&{ [ -n "${SSHI_RPS1}" ]&&{
     echo -e "Connecting to ${FOUND} with local prompt.\n";SSHREMCMD="export PS1=\"${SSHI_RPS1}\";exec bash";}
   }||{
   #- The rcfile to use remotely. Regenerates every time you log in.
   # local .bashrc will be called at the end. Overrides can be defined on the remote.
-
   # This variable is exported for use on remote systems.
    [ -z "${RCPUSH}" ]&&RCPUSH=".bashrc_pushed-${USER}"
   #- Add an alias to bash (use your customized bash env).
@@ -234,16 +226,16 @@ EOF
   #- Had a problem with the embedded __sshi_l alias with older Perl versions.
   # Not going to figure it out for now.
   # We fall back to "tee -i", if the version is lower than 5.20.
-   PF="${PF};perl -e 'use v5.20;' 2>/dev/null;[ \${?} -gt 0 ]&&{ echo;
+   PC="perl -e 'use v5.20;' 2>/dev/null;[ \${?} -gt 0 ]&&{ echo;
     OLDPVER=1;echo '**** WARNING: Available Perl version is earlier than 5.20. ****';
     echo '**** Using tee -i for logging (NO OUTPUT FILTERING).       ****';echo;}"
-
+   eval "${PC}"
    eval "${PF}"
   #- Gather aliases.
    local ALI=;local OI=${IFS};IFS=$'\n';
    for A in $(alias);do
     #- Replace the __sshi_l alias, if an old Perl version was found locally.
-    [[ "${A}" =~ ^alias\ __sshi_l ]]&&{ [ -n "${OLDPVER}" ]&&{ A="alias __sshi_l='tee -i'"; } }
+    [[ "${A}" =~ ^alias\ __sshi_l ]]&&{ [ -n "${OLDPVER}" ]&&{ A="alias __sshi_l='tee -i'";} }
     ALI="${ALI}${A};"
    done
    IFS=${OI}
@@ -263,9 +255,9 @@ EOF
    local SSHREMCMD="echo \"${RBASHRC_E}\">~/${RCPUSH};exec bash --rcfile ~/${RCPUSH}";
   }
   [ -n "${LOGFILE}" ]&&{ [ -z "${OLDPVER}" ]&&{
-    /usr/bin/ssh ${@} -t "${SSHREMCMD}"|__sshi_l ${LOGFILE};}||{
-    /usr/bin/ssh ${@} -t "${SSHREMCMD}"|tee -i ${LOGFILE};}
-   }||{ /usr/bin/ssh ${@} -t "${SSHREMCMD}";}
+   /usr/bin/ssh ${@} -t "${SSHREMCMD}"|__sshi_l ${LOGFILE};}||{
+   /usr/bin/ssh ${@} -t "${SSHREMCMD}"|tee -i ${LOGFILE};}
+  }||{ /usr/bin/ssh ${@} -t "${SSHREMCMD}";}
 #- No match found in config. Just run SSH command.
  }||{
   [ -n "${LOGFILE}" ]&&{ [ -z "${OLDPVER}" ]&&{
@@ -279,9 +271,9 @@ EOF
   #- Report the session log path, but not if zero-length.
    [ -s "${LOGFILE}" ]&&{ echo "Session logged to ${LOGFILE}";}||
   #- Warn the user of zero-length log, and clear the file.
-   { echo "No output logged from session. Removing ${LOGFILE}"; rm "${LOGFILE}";}
+   { echo "No output logged from session. Removing ${LOGFILE}";rm "${LOGFILE}";}
   #- Warn the user that we were unable to write the session log.
-  }||{ echo "WARNING: Logging is enabled, but unable to write to log. Verify  SSHI_LOG_LOC is correct.";} }
+  }||{ echo "WARNING: Logging is enabled, but unable to write to log. Verify SSHI_LOG_LOC is correct.";} }
 } # END ssh
 
 # vim: filetype=sh tabstop=1 expandtab
