@@ -64,23 +64,15 @@ ssh(){
   SSHI_RPS1='\[\033[1;1m\](\[\033[1;31m\]SSH\[\033[0;1m\])\[\033[0;37m\]${PS1}'
   SSHI_UC=~/.ssh/config
 #  SSHI_MC=/etc/ssh/ssh_config
-  SSHI_LOG_BY_DEF=1 #TODO: Disable this when using on remote SSH hosts.
+  SSHI_LOG_BY_DEF=1
   SSHI_LOG_LOC=~/ssh_logs
- # Create the log destination dir, if it doesn't exist.
   SSHI_CREATE_LOG_LOC=1
- # Don't try to log when running this in a remote SSH session.
   SSHI_NO_LOG_REMOTE=1
- # Compress SSH logs by default.
   SSHI_LOG_COMPRESS=1
- # Comppress SSH logs older than 3 days.
-  SSHI_LOG_CMP_AGE=2
- # Remove SSH logs smaller than 512 bytes
+  SSHI_LOG_CMP_AGE=3
   SSHI_LOG_MIN_SIZE=512
- # Compress SSH logs using this tool:
   SSHI_LOG_CMP_BIN=gzip
- # Options to pass to the compression tool:
   SSHI_LOG_CMP_OPTS=-9
- # Location of SSH command:
   SSHI_SSH_BIN=/usr/bin/ssh
 EOF
  }
@@ -114,8 +106,7 @@ EOF
   $sw="^\\-[1246AaCfGgKkMNnsTtVvXxYy]";$op="^\\bcDEeFIiLlmOopQqRSWw]";
   $sh="";while($ar=shift(@ARGV)){if($ar=~/$op/){shift(@ARGV);}elsif(!($ar=~/$sw/)){$sh=$ar;}}
 #-(3)-
-  $sh=~s/^\w+\@//;o("SSH_HOST=$sh");
-  while(<STDIN>){
+  $sh=~s/^\w+\@//;o("SSH_HOST=$sh");while(<STDIN>){
 #-(4)-
    $p=$_;%rt=("\\."=>"\\.","\\*"=>".*","\\?"=>".");
 #-(5)-

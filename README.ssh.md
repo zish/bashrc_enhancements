@@ -58,6 +58,50 @@ SSHI\_LOG\_LOC=~/ssh\_logs
 
 _Log file names in this directory will be formatted as 'HOST\-YYYY\-MM\-DD_HH\-MM\-SS\.log'\._
 
+### SSHI\_CREATE\_LOG\_LOC \- Create the log destination dir, if it doesn't exist.
+_Default:_
+SSHI\_CREATE\_LOG\_LOC=1
+
+If SSHI\_CREATE\_LOG\_LOC is nonzero, the log destination directory (SSHI\_LOG\_LOC) will be created if it does not exist.
+
+### SSHI\_NO\_LOG\_REMOTE \- Don't try to generate logs, when using ssh function in a remote SSH session.
+_Default:_
+SSHI\_NO\_LOG\_REMOTE=1
+
+No logging functions will be attempted, if SSHI\_NO\_LOG\_REMOTE is nonzero.
+
+SSHI\_LOG\_COMPRESS \- Compress SSH logs.
+_Default:_
+SSHI\_LOG\_COMPRESS=1
+
+If SSHI\_LOG\_COMPRESS is nonzero, any SSH logs older than SSHI\_LOG\_CMP\_AGE will be compressed.
+
+SSHI\_LOG\_CMP\_BIN \- SSH log compression tool to use.
+_Default:_
+SSHI\_LOG\_CMP\_BIN=gzip
+
+*The compresion tool specified by SSHI\_LOG\_CMP\_BIN must support reading from STDIN, and writing to STDOUT.*
+
+SSHI\_LOG\_CMP\_OPTS \- Command-line options for compression tool (specified by SSHI\_LOG\_CMP\_BIN).
+_Default:_
+SSHI\_LOG\_CMP\_OPTS=-9
+
+SSHI\_LOG\_CMP\_AGE \- Set the minimum SSH log age (in days) for compression eligibility.
+_Default:_
+SSHI\_LOG\_CMP\_AGE=3
+
+SSHI\_LOG\_MIN\_SIZE \- Minimum size (in bytes) an SSH log must be to avoid being deleted.
+_Default:_
+SSHI\_LOG\_MIN\_SIZE=512
+
+When performing SSH log directory maintenance, delete old logs (see SSHI\_LOG\_CMP\_AGE) that a smaller than SSHI\_LOG\_MIN\_SIZE.
+
+### SSHI\_SSH\_BIN \- Location of SSH command\.
+_Default:_
+SSHI\_SSH\_BIN=/usr/bin/ssh
+
+If the SSH command is in a different location, it can be defined using this option.
+
 
 ## Using \[SSH\_INCLUDE\] in your local bashrc\.
 *This gives you the ability to include parts of your bashrc that otherwise wouldn't be easily transferrable\.*
