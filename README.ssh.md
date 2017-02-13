@@ -94,13 +94,20 @@ SSHI\_LOG\_MIN\_SIZE \- Minimum size (in bytes) an SSH log must be to avoid bein
 _Default:_
 SSHI\_LOG\_MIN\_SIZE=512
 
-When performing SSH log directory maintenance, delete old logs (see SSHI\_LOG\_CMP\_AGE) that a smaller than SSHI\_LOG\_MIN\_SIZE.
+SSHI\_LOG\_FILT \- Optional filters to apply to log file output\.
+_Default:_
+*NOT SET*
+
+This can be used for "fixing" log output, such as masking passwords or omitting other items from the log\.
+*It does not affect the terminal output.*
+
+When performing SSH log directory maintenance, delete old logs (see SSHI\_LOG\_CMP\_AGE) that a smaller than SSHI\_LOG\_MIN\_SIZE\.
 
 ### SSHI\_SSH\_BIN \- Location of SSH command\.
 _Default:_
 SSHI\_SSH\_BIN=/usr/bin/ssh
 
-If the SSH command is in a different location, it can be defined using this option.
+If the SSH command is in a different location, it can be defined using this option\.
 
 
 ## Using \[SSH\_INCLUDE\] in your local bashrc\.
@@ -109,6 +116,23 @@ If, for example, an external tool or function required commented lines or encode
 This can also be used to include local environment variables on the remote system, but their definitions must be in the local \.bashrc\.
 
 To include lines from your bashrc, add "\# \[SSH\_INCLUDE\] XX" \(where XX is the number of lines\) to the line above the section you want\.
+
+
+# (TODO):
+## SSHI\_LOG\_FILT examples\.
+SSHI\_LOG\_FILT=(
+'^(enable\ password\ )(\S+)//\1\*\*\*\*\*\*\*\*'
+'^(enable\ secret\ )(\S+)//\1\*\*\*\*\*\*\*\*'
+'^passwd\ )(\S+)$//\1\*\*\*\*\*\*\*\*'
+'^(username\ \S+ password\ )(\S+)//\1\*\*\*\*\*\*\*\*'
+'^(username\ \S+ privilege\ \d+\ (secret|password)\ \d+\ )(\S+)//\1\*\*\*\*\*\*\*\*'
+
+'^( ikev1 pre-shared-key )(\S+)//\1\*\*\*\*\*\*\*\*'
+'^( ikev2 remote-authentication pre-shared-key )(\S+)//\1\*\*\*\*\*\*\*\*'
+'^( ikev2 local-authentication pre-shared-key )(\S+)//\1\*\*\*\*\*\*\*\*'
+'^( ospf message-digest-key \d+ \S+ )(\S+)//\1\*\*\*\*\*\*\*\*'
+'^( key \d+ )(\S+)//\1\*\*\*\*\*\*\*\*'
+)
 
 ### Examples:
 
