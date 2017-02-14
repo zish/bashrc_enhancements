@@ -48,11 +48,6 @@ alias __sshi_l="perl -MIO::Handle -e '\$mb=1000;exit(1)if(!\$ARGV[0]);\$SIG{INT}
    \$b.=\$c;}close(\$l);}
  else{die(ord(7).ord(7).ord(7).\"Problem writing to \\\"\".\$ARGV[0].\"\\\":\".\$!.\"\\n\");}' --"
 
-#- Use Perl for BASE64 encode/decode. This eliminates the need to
-# keep track of different encode/decode tools and their cmd line opts.
-alias __sshi_encode="perl -MMIME::Base64 -e '\$f=join(\"\",<STDIN>);print encode_base64(\$f,\"\");'"
-alias __sshi_decode="perl -MMIME::Base64 -e '\$f=join(\"\",<STDIN>);print decode_base64(\$f,\"\");'"
-
 #- Modification of anything within this section requires you to reread your rc or restart bash.
 ssh(){
 #- Set the configuration defaults, if no global override have been set.
@@ -115,8 +110,8 @@ _sshi_scancnf(){
     $ch=$1;$a=$2;@h=($ch=~/([^\s\,]+)/g);foreach $H(@h){
      foreach $e(sort{$b cmp $a}(keys(%rt))){$H=~s/$e/$rt{$e}/g;} #-(6)-
      $H="^($H)\$";if($sh=~/$H/){@O=split(/\s*\,\s*/,$a);
-      o("S_F=$sh");o("S_LG=1","S_LG",\@O);
-      o("S_NL=1","S_NL",\@O);o("NOPROMPT=1","NOPROMPT",\@O);
+      o("S_F=$sh");o("S_LG=1","LOGFILE",\@O);
+      o("S_NL=1","NOLOG",\@O);o("NOPROMPT=1","NOPROMPT",\@O);
       o("PROMPTONLY=1","PROMPTONLY",\@O);exit;}}}}' -- ${OP[@]}
 }
 
@@ -170,16 +165,22 @@ _sshi_package_include_files(){
 #_sshi_package_include_files
 #return
 
+#- Use Perl for BASE64 encode/decode. This eliminates the need to
+# keep track of different encode/decode tools and their cmd line opts.
+local S_BE="perl -MMIME::Base64 -e '\$f=join(\"\",<STDIN>);print encode_base64(\$f,\"\");'"
+local S_BD="perl -MMIME::Base64 -e '\$f=join(\"\",<STDIN>);print decode_base64(\$f);'"
+
+#- Get/set SSHI variable defaults.
 eval "$(_sshi_defaults)"; eval "$(_sshi_scancnf ${SSHI_UC} ${SSHI_MC} ${@})"
 
 #- Log file name format.
 local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
 #- Determine if we should log.
-[ -n "${SSHI_IS_SSH}" ]&&[ -n "${SSHI_NO_LOG_REMOTE}" ]&&{ S_NL=1;unset S_LF;}||
+[ -n "${SSHI_IS_SSH}" ]&&[ -n "${SSHI_NO_LOG_REMOTE}" ]&&{ S_NL=1;unset S_LF;}||{
 # Log by default. Turn off logging when requested.
-{ [ -n "${SSHI_LOG_BY_DEF}" ]&&{ [ -n "${S_NL}" ]&&unset S_LG S_NL||S_LG=1;}||
+ [ -n "${SSHI_LOG_BY_DEF}" ]&&{ [ -n "${S_NL}" ]&&unset S_LG S_NL||S_LG=1;}||{
 # Do not log by default. Turn on logging when requested.
- { [ -n "${S_LG}" ]&&local S_LG=1;}
+  [ -n "${S_LG}" ]&&local S_LG=1;}
 #- Make sure log location is writable.
  [ -n "${S_LG}" ]&&{ local S_LF="${SSHI_LOG_LOC}/${S_LFM}"
  #- Create SSH log directory if needed.
@@ -239,7 +240,7 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
  # Functions need to be decoded before 'source'ing them (for some reason). Decoded output is
  # piped to RCPUSH.funcs file, which is sourced from the pushed rc file.
   local RFUNCS="export RCPUSH=${RCPUSH};$(_sshi_getrc ${RC} ${SSHI_ADD_SUBS})"
-  local RFUNCS_E="sleep 0.2;echo "$(echo "${RFUNCS}"|__sshi_encode)"|__sshi_decode>~/${RCPUSH}.funcs;. ~/${RCPUSH}.funcs"
+  local RFUNCS_E="sleep 0.2;echo \"$(echo "${RFUNCS}"|eval ${S_BE})\"|${S_BD}>~/${RCPUSH}.funcs;. ~/${RCPUSH}.funcs"
   RBASHRC_E="export SSHI_IS_SSH=1;${S_A}${RFUNCS_E};${RBASHRC}"
   RBASHRC_E=${RBASHRC_E//\$/\\$};RBASHRC_E=${RBASHRC_E//\"/\\\"}
   local SSHREMCMD="echo \"${RBASHRC_E}\">~/${RCPUSH};exec bash --rcfile ~/${RCPUSH}"

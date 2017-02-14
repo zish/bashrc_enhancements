@@ -202,6 +202,8 @@ _This illustrates multiple options can be used per host entry\._
 
 ## Variable names and their function:
 RCPUSH - Defines the name of the pushed \.bashrc file (\.bashrc\_pushed-[username])\.
+S\_BD - Holds Perl BASE64 decoder script.
+S\_BE - Holds Perl BASE64 encoder script.
 S\_LFM - Defines the name format of the session's log file\.
 S\_LF - Defines the full path of the session log file\.
 S\_LG - Used as boolean. Set by _sshi_scancnf, when the SSH config host entry has the "LOG" option defined\.
