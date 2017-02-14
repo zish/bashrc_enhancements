@@ -36,7 +36,7 @@ To remotely use your local PS1 unmodified, use the following:
 
 ### SSHI\_SSH\_UC \- SSH Local user config file
 _Default:_
-* SSHI\_SSH\_UC=~/\\.ssh/config
+* SSHI\_SSH\_UC=$\{HOME\}/\.ssh/config
 
 ### SSHI\_SSH\_MC \- SSH system\-wide \(main\) config file
 _Default:_
@@ -58,39 +58,39 @@ SSHI\_LOG\_LOC=~/ssh\_logs
 
 _Log file names in this directory will be formatted as 'HOST\-YYYY\-MM\-DD_HH\-MM\-SS\.log'\._
 
-### SSHI\_CREATE\_LOG\_LOC \- Create the log destination dir, if it doesn't exist.
+### SSHI\_CREATE\_LOG\_LOC \- Create the log destination dir, if it doesn't exist\.
 _Default:_
 SSHI\_CREATE\_LOG\_LOC=1
 
-If SSHI\_CREATE\_LOG\_LOC is nonzero, the log destination directory (SSHI\_LOG\_LOC) will be created if it does not exist.
+If SSHI\_CREATE\_LOG\_LOC is nonzero, the log destination directory (SSHI\_LOG\_LOC) will be created if it does not exist\.
 
-### SSHI\_NO\_LOG\_REMOTE \- Don't try to generate logs, when using ssh function in a remote SSH session.
+### SSHI\_NO\_LOG\_REMOTE \- Don't try to generate logs, when using ssh function in a remote SSH session\.
 _Default:_
 SSHI\_NO\_LOG\_REMOTE=1
 
-No logging functions will be attempted, if SSHI\_NO\_LOG\_REMOTE is nonzero.
+No logging functions will be attempted, if SSHI\_NO\_LOG\_REMOTE is nonzero\.
 
-SSHI\_LOG\_COMPRESS \- Compress SSH logs.
+SSHI\_LOG\_COMPRESS \- Compress SSH logs\.
 _Default:_
 SSHI\_LOG\_COMPRESS=1
 
-If SSHI\_LOG\_COMPRESS is nonzero, any SSH logs older than SSHI\_LOG\_CMP\_AGE will be compressed.
+If SSHI\_LOG\_COMPRESS is nonzero, any SSH logs older than SSHI\_LOG\_CMP\_AGE will be compressed\.
 
-SSHI\_LOG\_CMP\_BIN \- SSH log compression tool to use.
+SSHI\_LOG\_CMP\_BIN \- SSH log compression tool to use\.
 _Default:_
 SSHI\_LOG\_CMP\_BIN=gzip
 
-*The compresion tool specified by SSHI\_LOG\_CMP\_BIN must support reading from STDIN, and writing to STDOUT.*
+*The compresion tool specified by SSHI\_LOG\_CMP\_BIN must support reading from STDIN, and writing to STDOUT\.*
 
-SSHI\_LOG\_CMP\_OPTS \- Command-line options for compression tool (specified by SSHI\_LOG\_CMP\_BIN).
+SSHI\_LOG\_CMP\_OPTS \- Command-line options for compression tool (specified by SSHI\_LOG\_CMP\_BIN)\.
 _Default:_
 SSHI\_LOG\_CMP\_OPTS=-9
 
-SSHI\_LOG\_CMP\_AGE \- Set the minimum SSH log age (in days) for compression eligibility.
+SSHI\_LOG\_CMP\_AGE \- Set the minimum SSH log age (in days) for compression eligibility\.
 _Default:_
 SSHI\_LOG\_CMP\_AGE=3
 
-SSHI\_LOG\_MIN\_SIZE \- Minimum size (in bytes) an SSH log must be to avoid being deleted.
+SSHI\_LOG\_MIN\_SIZE \- Minimum size (in bytes) an SSH log must be to avoid being deleted\.
 _Default:_
 SSHI\_LOG\_MIN\_SIZE=512
 
@@ -99,7 +99,7 @@ _Default:_
 *NOT SET*
 
 This can be used for "fixing" log output, such as masking passwords or omitting other items from the log\.
-*It does not affect the terminal output.*
+*It does not affect the terminal output\.*
 
 When performing SSH log directory maintenance, delete old logs (see SSHI\_LOG\_CMP\_AGE) that a smaller than SSHI\_LOG\_MIN\_SIZE\.
 
@@ -158,31 +158,42 @@ export ANDROID_HOME=${HOME}/bin/android-studio/sdk
 
 ## Overriding settings for hosts in the SSH config file\.
 
-_NOTE:_ To make use of the majority of features in the SSH intercept function, a remote SSH Host **_Must_** have a matching Host entry in the SSH config\. *Session logging does not require a matching Host entry, if SSHI\_LOG\_BY\_DEF is set\.
+_NOTE:_ To make use of the majority of features in the SSH intercept function, a remote SSH Host **_Must_** have a matching Host entry in the SSH config\. *Session logging does not require a matching Host entry, if SSHI\_LOG\_BY\_DEF is set\.*
 
-### Examples:
+### SSH config host entry examples:
 *SSH intercept function only needs a "Host" line\. Additional SSH Host options are ignored by the function itself\.*
 
-Host 10\.20\.30\.40 www\.cefncefh\.com
+*Host 10\.20\.30\.40 www\.cefncefh\.com*
 * SSH sessions to IP address 10\.20\.30\.40 and Hostname www\.cefncefh\.com will include local PS1, available functions, aliases\. Sessions will be logged if SSHI\_LOG\_BY\_DEF is set\.
 
-Host internal\-\*\.jakakwpqs\.net 192\.168\.\*\.\*
+*Host internal\-\*\.jakakwpqs\.net 192\.168\.\*\.\**
 * This illustrates that wildcards are supported\.
 
-Host argle\.bargle\.systemhalted\.com \#PROMPTONLY
+*Host argle\.bargle\.systemhalted\.com \#PROMPTONLY*
 * Only use the PS1 prompt on the remote host\. Local aliases and functions will not be included\.
 
-Host foo\.csopqcnaleicn\.lan \#NOLOG,PROMPTONLY
+*Host foo\.csopqcnaleicn\.lan \#NOLOG,PROMPTONLY*
 * Only use the PS1 prompt on the remote host\. Local aliases and functions will not be included\.
 * Disable logging if SSHI\_LOG\_BY\_DEF is set\.
 
-Host bar\.csopqcnaleicn\.lan \# PROMPTONLY, LOG
+*Host bar\.csopqcnaleicn\.lan \# PROMPTONLY, LOG*
 _This illustrates multiple options can be used per host entry\._
 * Only use the PS1 prompt on the remote host\. Local aliases and functions will not be included\.
 * Enable logging if SSHI\_LOG\_BY\_DEF is NOT set\.
 
-Host firewall\.internal\-network\.lan \#NOPROMPT
-Host \*\.internal\-network\.lan
+*Host firewall\.internal\-network\.lan \#NOPROMPT*
+*Host \*\.internal\-network\.lan*
 * Disable use of local PS1, available functions, aliases for host firewall\.internal\-network\.lan\.
 * \.\.\.but enable for all other hosts matching \*\.internal\-network\.lan\.
 
+### Roadmap:
+* Get remote file shipping to work.
+ 1. Just copy the files for now. Do not copy if the files are pre-existing\.
+
+* Additional functionality in file shipping:
+ 2. Generate checksums of each file to be included\.
+  * Store these checksums on the remote host\. use them to compare local and remote copies\.
+  * Only copy each file, if it either does not exist, or the checksums don't match\.
+ 3. New option "SSHI\_INC\_FILES\_ARCHIVE\_LOC"
+  * Used when including local files to the remote host\. This specifies a location to archive pre-existing remote files, before they are replaced by the local version\. This functionality is disabled if SSHI\_INC\_FILES\_ARCHIVE\_LOC is not set, or the matching host entry in the SSH config includes the "NO\_ARCHIVE\_REMOTE\_FILES" option\.
+ 4. Add per-host override for SSHI\_INC\_FILES, allowing the ability to specify different files per-host.

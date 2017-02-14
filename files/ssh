@@ -65,6 +65,7 @@ _sshi_defaults(){ local IFS=$'\n'
  done<<EOF
  SSHI_ADD_SUBS="sudo ssh tar addpath"
  SSHI_INC_FILES=()
+ SSHI_INC_FILES_ARCHIVE_LOC=
  SSHI_RPS1='\[\033[1;1m\](\[\033[1;31m\]SSH\[\033[0;1m\])\[\033[0;37m\]${PS1}'
  SSHI_UC=~/.ssh/config
 # SSHI_MC=/etc/ssh/ssh_config
@@ -156,9 +157,18 @@ _sshi_getrc(){
 }
 
 #- TODO: Package external files for inclusion.
-_sshi_include_files(){
- for I in "${SSHI_INC_FILES[@]}";do echo "I: ${I}";done;
+_sshi_package_include_files(){
+ for I in "${SSHI_INC_FILES[@]}";do
+  [[ ${I} =~ ^([^:]+):([^:]+)$ ]] && {
+   echo -ne "\"${BASH_REMATCH[1]}\" "
+   echo -ne "\"${BASH_REMATCH[2]}\" "
+  }
+  echo "I: ${I}";
+ done;
 }
+
+#_sshi_package_include_files
+#return
 
 eval "$(_sshi_defaults)"; eval "$(_sshi_scancnf ${SSHI_UC} ${SSHI_MC} ${@})"
 

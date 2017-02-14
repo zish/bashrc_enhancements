@@ -15,7 +15,6 @@ Initial release of new intercept function for 'ssh'.
 ## 2016-09-08 #1
 Initial release of new intercept functions for 'tar' and 'sudo'.
 
-
 ## 2016-09-07
 Initial release of addpath function.
 
