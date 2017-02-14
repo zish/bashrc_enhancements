@@ -202,15 +202,17 @@ _This illustrates multiple options can be used per host entry\._
 
 ## Variable names and their function:
 RCPUSH - Defines the name of the pushed \.bashrc file (\.bashrc\_pushed-[username])\.
+S\_A - Holder for aliases to be packaged and included in remote SSH session\.
 S\_BD - Holds Perl BASE64 decoder script.
 S\_BE - Holds Perl BASE64 encoder script.
+S\_E - Used as boolean. Set as true when trying to determine if the session log can be written to\.
+S\_F - Set by _sshi_scancnf function when an SSH Host entry was matched in the SSH config(s)\.
 S\_LFM - Defines the name format of the session's log file\.
 S\_LF - Defines the full path of the session log file\.
 S\_LG - Used as boolean. Set by _sshi_scancnf, when the SSH config host entry has the "LOG" option defined\.
 S\_NL - Used as boolean. Set by _sshi_scancnf, when the SSH config host entry has the "NOLOG" option defined\.
-S\_E - Used as boolean. Set as true when trying to determine if the session log can be written to\.
-S\_F - Set by _sshi_scancnf function when an SSH Host entry was matched in the SSH config(s)\.
-S\_A - Holder for aliases to be packaged and included in remote SSH session\.
-SSHI\_IS\_SSH - Used as boolean. This is an environment variable set in SSH session, to help determine if we are actively in an SSH session.
+SSHREMCMD - Holder for the commands to run on the remote SSH session, in order to set up the environment\.
+SSHEXEC - Full SSH command to execute, including contents of S\_SC\.
+SSHI\_IS\_SSH - Used as boolean. This is an environment variable set in SSH session, to help determine if we are actively in an SSH session\.
 
 
