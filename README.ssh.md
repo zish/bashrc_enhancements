@@ -197,3 +197,18 @@ _This illustrates multiple options can be used per host entry\._
  3. New option "SSHI\_INC\_FILES\_ARCHIVE\_LOC"
   * Used when including local files to the remote host\. This specifies a location to archive pre-existing remote files, before they are replaced by the local version\. This functionality is disabled if SSHI\_INC\_FILES\_ARCHIVE\_LOC is not set, or the matching host entry in the SSH config includes the "NO\_ARCHIVE\_REMOTE\_FILES" option\.
  4. Add per-host override for SSHI\_INC\_FILES, allowing the ability to specify different files per-host.
+
+### Additional techinical details:
+
+## Variable names and their function:
+RCPUSH - Defines the name of the pushed \.bashrc file (\.bashrc\_pushed-[username])\.
+S\_LFM - Defines the name format of the session's log file\.
+S\_LF - Defines the full path of the session log file\.
+S\_LG - Used as boolean. Set by _sshi_scancnf, when the SSH config host entry has the "LOG" option defined\.
+S\_NL - Used as boolean. Set by _sshi_scancnf, when the SSH config host entry has the "NOLOG" option defined\.
+S\_E - Used as boolean. Set as true when trying to determine if the session log can be written to\.
+S\_F - Set by _sshi_scancnf function when an SSH Host entry was matched in the SSH config(s)\.
+S\_A - Holder for aliases to be packaged and included in remote SSH session\.
+SSHI\_IS\_SSH - Used as boolean. This is an environment variable set in SSH session, to help determine if we are actively in an SSH session.
+
+
