@@ -93,8 +93,6 @@ _sshi_scancnf(){
 #- COMMENTS have been moved from embedded Perl, and replaced with pointers.
 # This is to decrease the in-memory size of the ssh intercept function.
 # BaSH Comments are omitted from in-memory, but embedded strings are left alone.
-#
-# POINTERS:
 #  -(1)- : Opts with NO argument. ( $sw )
 #  -(2)- : Opts WITH AN argument. ( $op )
 #  -(3)- : Decouple user@ prefix.
@@ -134,12 +132,10 @@ _sshi_clean_log_dir () { local IFS=$'\n';local CT="$(date +'%s')"
 
 #- Pull requested functions defined by SSHI_ADD_SUBS.
 # and lines in rc file marked by [SSHI_INCLUDE XX] remarks.
-_sshi_getrc(){
-#- COMMENTS have been moved from embedded Perl, and replaced with pointers.
-# POINTERS:
 #  -(1)- : $b stands for {b}rackets.
 #  -(2)- : Grab [SSHI_INCLUDE] sections in bashrc.
 #          * GETS BOTH SSH_INCLUDE AND SSHI_INCLUDE. The former will be deprecated soon.
+_sshi_getrc(){
  set|/usr/bin/perl -e '$rc=shift(@ARGV);my%addSubs;foreach my$f(@ARGV){$addSubs{$f}=1;}
   my$b;foreach my$l(<STDIN>){
    if($l=~/^\s*(\S+)\s+\([^\(\)]*\)\s*$/){$b=$1;} #-(1)-
