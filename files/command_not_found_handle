@@ -1,0 +1,95 @@
+#- Augment for command_not_found_handler function.
+# This tool digests a named array called COMMAND_ALIASES.
+# Its primary function is to intercept command typos, including those with spaces.
+# Because of this, it also creates the ability to define command aliases with spaces (eg. 'l s-l'='ls -l').
+#
+# Author: Jeremy Melanson
+#
+# Source-code, documentation and revision Git repository: https://github.com/zish/bashrc_enhancements
+#
+# Author: Jeremy Melanson
+#
+# Last-Modified: 2016-09-08
+#
+# $ git clone https://github.com/zish/bashrc_enhancements
+#
+# To use this, source the file from your .bashrc (or .bash_profile).
+#
+# This file is part of bashrc_enhancements.
+#
+# bashrc_enhancements is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# bashrc_enhancements is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
+
+
+[ -z "${COMMAND_ALIASES}" ] && declare -A COMMAND_ALIASES
+
+#- Rename the original "command_not_found_handle" function to "_system_command_not_found_handle".
+# If it is not defined, a small function is defined to take its place, to avoid complexity.
+_rename_orig_command_not_found_handle () {
+   local RGX="^([^\S=]+) \(\)"
+   NEW="_system_command_not_found_handle () "
+   local ORIG_FUNC_NAME="command_not_found_handle"
+   #--- Avoid problems with new function, if it was already defined.
+   local IFS=$'\n'
+   [ "${_COMMAND_ALIASES_INIT}" = "1" ] && ORIG_FUNC_NAME="_system_command_not_found_handle"
+
+   local OUTPUT=$(set | while read -r L; do 
+      [[ "${L}" =~ ${RGX} ]] && { 
+         [[ "${BASH_REMATCH[1]}" == ${ORIG_FUNC_NAME} ]] && {
+            export FMATCH="1"
+         }
+      } || {
+         [[ "${L}" =~ ^\}$ ]] && {
+            #--- function was found and recorded. "eval" it with the new name.
+            [ "${FMATCH}" = "1" ] && {
+               echo -e "export _COMMAND_ALIASES_INIT=1;\n${NEW}\n}"
+               return
+            }
+         } || {
+            [ "${FMATCH}" = "1" ] && {
+               export NEW="${NEW}${L}\n"
+            }
+         }
+      }
+   done)
+
+   [ -n "${OUTPUT}" ] && echo -e "${OUTPUT}" \
+   || echo -e "export _COMMAND_ALIASES_INIT=1;\n${NEW}{ echo -ne \"\"; }"
+}
+
+eval "$(_rename_orig_command_not_found_handle)"
+
+command_not_found_handle () {
+   EXITLVL=
+   INPUT_CMD=(${@})
+   CHECK=
+   RUN_CMD=()
+   for C in "${INPUT_CMD[@]}"; do
+      [ -n "${RUN_CMD[0]}" ] && {
+         RUN_CMD=(${RUN_CMD} ${C})
+      } || {
+         [ -z "${CHECK}" ] && CHECK="${C}" || CHECK="${CHECK} ${C}"
+         [ -n "${COMMAND_ALIASES[${CHECK}]}" ] && {
+            RUN_CMD=("${COMMAND_ALIASES[${CHECK}]}")
+         }
+      }
+   done
+   [ -n "${RUN_CMD}" ] && {
+      ${RUN_CMD[*]}; EXITLVL=${?}
+   } || {
+      eval "_system_command_not_found_handle ${INPUT_CMD[*]}; EXITLVL=${?}"
+   }
+   return ${EXITLVL}
+}
+
+# vim: ft=sh tabstop=3 expandtab
