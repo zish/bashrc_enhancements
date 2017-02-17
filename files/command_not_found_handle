@@ -30,6 +30,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
+# TODO:
+#  Document how to include and invoke all dependencies with SSH intercept.
+#  Document examples, and manifesto.
+#  Caveats:
+#     Command must not exist to be used as an alias, including any cmd_alias with spaces (commands up to the first space).
+#
+#  Figure out how to create aliases when needed (to help with the first caveat above).
+#
 
 [ -z "${COMMAND_ALIASES}" ] && declare -A COMMAND_ALIASES
 
@@ -65,31 +73,31 @@ _rename_orig_command_not_found_handle () {
 
    [ -n "${OUTPUT}" ] && echo -e "${OUTPUT}" \
    || echo -e "export _COMMAND_ALIASES_INIT=1;\n${NEW}{ echo -ne \"\"; }"
+
+   echo -e 'command_not_found_handle () {
+      EXITLVL=
+      INPUT_CMD=(${@})
+      CHECK=
+      RUN_CMD=()
+      for C in "${INPUT_CMD[@]}"; do
+         [ -n "${RUN_CMD[0]}" ] && {
+            RUN_CMD=(${RUN_CMD} ${C})
+         } || {
+            [ -z "${CHECK}" ] && CHECK="${C}" || CHECK="${CHECK} ${C}"
+            [ -n "${COMMAND_ALIASES[${CHECK}]}" ] && {
+               RUN_CMD=("${COMMAND_ALIASES[${CHECK}]}")
+            }
+         }
+      done
+      [ -n "${RUN_CMD}" ] && {
+         ${RUN_CMD[*]}; EXITLVL=${?}
+      } || {
+         eval "_system_command_not_found_handle ${INPUT_CMD[*]}; EXITLVL=${?}"
+      }
+      return ${EXITLVL}
+   }'
 }
 
 eval "$(_rename_orig_command_not_found_handle)"
-
-command_not_found_handle () {
-   EXITLVL=
-   INPUT_CMD=(${@})
-   CHECK=
-   RUN_CMD=()
-   for C in "${INPUT_CMD[@]}"; do
-      [ -n "${RUN_CMD[0]}" ] && {
-         RUN_CMD=(${RUN_CMD} ${C})
-      } || {
-         [ -z "${CHECK}" ] && CHECK="${C}" || CHECK="${CHECK} ${C}"
-         [ -n "${COMMAND_ALIASES[${CHECK}]}" ] && {
-            RUN_CMD=("${COMMAND_ALIASES[${CHECK}]}")
-         }
-      }
-   done
-   [ -n "${RUN_CMD}" ] && {
-      ${RUN_CMD[*]}; EXITLVL=${?}
-   } || {
-      eval "_system_command_not_found_handle ${INPUT_CMD[*]}; EXITLVL=${?}"
-   }
-   return ${EXITLVL}
-}
 
 # vim: ft=sh tabstop=3 expandtab
