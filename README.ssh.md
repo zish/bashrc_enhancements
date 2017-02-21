@@ -201,6 +201,7 @@ _This illustrates multiple options can be used per host entry\._
 ### Additional techinical details:
 
 ## Variable names and their function:
+R\_O - Returned output from last command iteration executed by \_sshi\_retry\_task\.
 RCPUSH - Defines the name of the pushed \.bashrc file (\.bashrc\_pushed-[username])\.
 S\_A - Holder for aliases to be packaged and included in remote SSH session\.
 S\_BD - Holds Perl BASE64 decoder script.
