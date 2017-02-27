@@ -43,6 +43,7 @@
 
 #- Rename the original "command_not_found_handle" function to "_system_command_not_found_handle".
 # If it is not defined, a small function is defined to take its place, to avoid complexity.
+# TODO: Create a mechanism for basic "fallback" or "alternative" commands, if functionality for a command does not exist.
 _rename_orig_command_not_found_handle () {
    local RGX="^([^\S=]+) \(\)"
    NEW="_system_command_not_found_handle () "
@@ -89,8 +90,13 @@ _rename_orig_command_not_found_handle () {
             }
          }
       done
+# TODO: Need to look at prior commands/functions/aliases for matching instances. Course through all (Makes this work much more like aliases)
+#echo "-------------------"
+#echo "INP: \"${INPUT_CMD[*]}\" \"${RUN_CMD[*]}\""
+#echo "-------------------"
       [ -n "${RUN_CMD}" ] && {
          ${RUN_CMD[*]}; EXITLVL=${?}
+#echo "-------------------"
       } || {
          eval "_system_command_not_found_handle ${INPUT_CMD[*]}; EXITLVL=${?}"
       }
