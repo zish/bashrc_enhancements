@@ -8,10 +8,10 @@
 #--- Useful little function that repeats a command each time a key is pressed.
 # The loop can be stopped by pressing 'q'.
 again () {
-	local CMD=("${@}")
 	local DONE=
 	while [ -z "${DONE}" ]; do
-		${CMD[@]}
+		eval "${@}"
+		echo -e "-------------------------------------------------"
 		read -p "Press any key to repeat command, or 'q' to quit. " -n1 C
 		[[ "${C}" == "q" ]] && DONE=1
 	done
