@@ -17,7 +17,7 @@ again () {
 	local DONE=
 	local CMDS=("${@}")
 	local IFS=$'\n'
-	local PMSG="'a': remaining,'n': next, 'p': previous, 'q': quit, 'r': restart"
+	local PMSG="('a': remaining,'n': next, 'p': previous, 'q': quit, 'r': restart) -> "
 	local RUN_METHOD=
 	local CMD_CHECK="\
 	[[ \"\${RUN_METHOD}\" == \"\" ]] && {
