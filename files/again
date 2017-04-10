@@ -43,6 +43,7 @@ again () {
 	while [ -z "${DONE}" ]; do
 		local CUR=0
 		while (( ${CUR} < ${#CMDS[@]} )); do
+			echo -e "COMMAND ${CUR} (${CMDS[${CUR}]})"
 			eval "${CMDS[${CUR}]}"
 			eval "${CMD_CHECK}"
 		done
