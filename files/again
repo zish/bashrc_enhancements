@@ -17,7 +17,7 @@ again () {
 	local DONE=
 	local CMDS=("${@}")
 	local IFS=$'\n'
-	local PMSG="Press any key to repeat command, or 'q' to quit. "
+	local PMSG="'a': remaining,'n': next, 'p': previous, 'q': quit, 'r': restart"
 	local RUN_METHOD=
 	local CMD_CHECK="\
 	[[ \"\${RUN_METHOD}\" == \"\" ]] && {
@@ -43,7 +43,7 @@ again () {
 	while [ -z "${DONE}" ]; do
 		local CUR=0
 		while (( ${CUR} < ${#CMDS[@]} )); do
-			echo -e "COMMAND ${CUR} (${CMDS[${CUR}]})"
+			echo -e "\n**** COMMAND ${CUR} (${CMDS[${CUR}]})\n"
 			eval "${CMDS[${CUR}]}"
 			eval "${CMD_CHECK}"
 		done

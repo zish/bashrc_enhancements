@@ -39,14 +39,57 @@
 # along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
 #- This is similar to 'tee', but is an embedded perl script. This allows for log output filtering (TODO).
-# \$mb == Maximum buffer before flushing to log file.
-alias __sshi_l="perl -MIO::Handle -e '\$mb=1000;exit(1)if(!\$ARGV[0]);\$SIG{INT}=\"IGNORE\";\
- if(open(\$l,\">\",\$ARGV[0])){\$l->autoflush(1);STDOUT->autoflush(1);\
-  while(!eof (STDIN)){\$c=getc(STDIN);print \$c;\
-   if(length(\$b)>=\$mb){print \$l \$b;\$b=undef;}\
-   elsif(\$c eq \"\\r\"||\$c eq \"\\n\"){print \$l \$b;\$b=undef;}\
-   \$b.=\$c;}close(\$l);}
- else{die(ord(7).ord(7).ord(7).\"Problem writing to \\\"\".\$ARGV[0].\"\\\":\".\$!.\"\\n\");}' --"
+#  -(1)- : \$mb == Maximum size of each buffer before filtering and flushing to log file.
+#          If you use a filter that requires a fairly long sample of characters, you may need to increase
+#          this number. Use this guide:
+#           1. Roughly estimate the maximum bytes needed to apply the filter. Rounding up is recommended.
+#           2. Multiply this number by 3.
+#           3. Modify \$mb=XXXX declaration in the alias to reflect this number.
+#          ** This alias uses 2 capture buffers, and runs filters against both, then halfway between them.
+#  -(2)- : \$b == Which data capture buffer to fill.
+#  -(3)- : @b == Data capture 'b'uffers. We flip between them to facilitate log filtering.
+#  -(4)- : \$o == 'o'verflow capture. This is for facilitating filtering. We don't want text cut between buffers.
+#  -(2)- : \$l == Output 'l'og filehandle.
+#  -(2)- : \$c == Holder for each 'c'haracter captured.
+alias __sshi_l="perl -MIO::Handle -e '#This is a required component for the SSH BaSH Intercept function.
+#part of the bashrc_enhancements project.
+use strict;
+my (\$l,\$c,\$o);
+my @b=(\"\");
+my \$b=1;
+ my \$filt = \"^\\<--\\ More\\ ---\\>\" . chr (13);
+ my \$mb=1000; #-(1)-
+
+ exit(1)if(!\$ARGV[0]);
+
+ \$SIG{INT}=\"IGNORE\";
+ if(open(\$l,\">\",\$ARGV[0])){
+  \$l->autoflush(1);
+  STDOUT->autoflush(1);
+  while(!eof (STDIN)){
+   \$c=getc(STDIN);
+   print \$c;
+#-(2)-
+   if((length(\$b[1])>=\$mb)||(\$c eq \"\\r\"||\$c eq \"\\n\")){
+    out();
+   }
+   \$b[1].=\$c;
+  }
+  close(\$l);
+ }else{
+  die(ord(7).ord(7).ord(7).\"Problem writing to \\\"\".\$ARGV[0].\"\\\":\".\$!.\"\\n\");
+ }
+
+sub out{
+ if((length(\$b[1])>=\$mb)||(\$c eq \"\\r\"||\$c eq \"\\n\")){
+  print \$l \$b[1];
+  \$b[1]=undef;
+# }else{
+
+ }
+}' --"
+
+
 
 #- Modification of anything within this section requires you to reread your rc or restart bash.
 ssh () {
@@ -63,7 +106,7 @@ _sshi_defaults () {
  SSHI_ADD_SUBS="sudo ssh tar addpath"
  SSHI_INC_FILES=()
  SSHI_INC_FILES_ARCHIVE_LOC=
- SSHI_RPS1='\[\033[1;1m\](\[\033[1;31m\]SSH\[\033[0;1m\])\[\033[0;37m\]${PS1}'
+ SSHI_RPS1='\[\e[1;1m\](\[\e[1;31m\]SSH\[\e[0;1m\])\[\e[0;37m\]${PS1}'
  SSHI_UC=~/.ssh/config
 # SSHI_MC=/etc/ssh/ssh_config
  SSHI_LOG_BY_DEF=1
