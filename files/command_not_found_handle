@@ -1,5 +1,5 @@
 #- Augment for command_not_found_handler function.
-# This tool digests a named array called COMMAND_ALIASES.
+# This tool digests a named array called COMMAND_TYPOS.
 # Its primary function is to intercept command typos, including those with spaces.
 # Because of this, it also creates the ability to define command aliases with spaces (eg. 'l s-l'='ls -l').
 #
@@ -39,7 +39,7 @@
 #  Figure out how to create aliases when needed (to help with the first caveat above).
 #
 
-[ -z "${COMMAND_ALIASES}" ] && declare -A COMMAND_ALIASES
+[ -z "${COMMAND_TYPOS}" ] && declare -A COMMAND_TYPOS
 
 #- Rename the original "command_not_found_handle" function to "_system_command_not_found_handle".
 # If it is not defined, a small function is defined to take its place, to avoid complexity.
@@ -50,7 +50,7 @@ _rename_orig_command_not_found_handle () {
    local ORIG_FUNC_NAME="command_not_found_handle"
    #--- Avoid problems with new function, if it was already defined.
    local IFS=$'\n'
-   [ "${_COMMAND_ALIASES_INIT}" = "1" ] && ORIG_FUNC_NAME="_system_command_not_found_handle"
+   [ "${_COMMAND_TYPOS_INIT}" = "1" ] && ORIG_FUNC_NAME="_system_command_not_found_handle"
 
    local OUTPUT=$(set | while read -r L; do 
       [[ "${L}" =~ ${RGX} ]] && { 
@@ -61,7 +61,7 @@ _rename_orig_command_not_found_handle () {
          [[ "${L}" =~ ^\}$ ]] && {
             #--- function was found and recorded. "eval" it with the new name.
             [ "${FMATCH}" = "1" ] && {
-               echo -e "export _COMMAND_ALIASES_INIT=1;\n${NEW}\n}"
+               echo -e "export _COMMAND_TYPOS_INIT=1;\n${NEW}\n}"
                return
             }
          } || {
@@ -73,7 +73,7 @@ _rename_orig_command_not_found_handle () {
    done)
 
    [ -n "${OUTPUT}" ] && echo -e "${OUTPUT}" \
-   || echo -e "export _COMMAND_ALIASES_INIT=1;\n${NEW}{ echo -ne \"\"; }"
+   || echo -e "export _COMMAND_TYPOS_INIT=1;\n${NEW}{ echo -ne \"\"; }"
 
    echo -e 'command_not_found_handle () {
       EXITLVL=
@@ -85,8 +85,8 @@ _rename_orig_command_not_found_handle () {
             RUN_CMD=(${RUN_CMD} ${C})
          } || {
             [ -z "${CHECK}" ] && CHECK="${C}" || CHECK="${CHECK} ${C}"
-            [ -n "${COMMAND_ALIASES[${CHECK}]}" ] && {
-               RUN_CMD=("${COMMAND_ALIASES[${CHECK}]}")
+            [ -n "${COMMAND_TYPOS[${CHECK}]}" ] && {
+               RUN_CMD=("${COMMAND_TYPOS[${CHECK}]}")
             }
          }
       done
