@@ -6,13 +6,51 @@
 # TODO:
 
 #--- Useful little function that repeats a command each time a key is pressed.
-# The loop can be stopped by pressing 'q'.
+# The loop can be interacted with, using the following keystrokes:
+# 'a' - Run 'all' commands remaining in the current loop iteration.
+#			Don't stop until the end.
+# 'n' - Run the 'next' command in the sequence. Restarts the loop if necessary.
+# 'p' - Run the 'previous' command in the sequence, up to the first command.
+# 'q'	- Quit.
+# 'r' - Restart (Re-run the commands, starting from the first one).
 again () {
 	local DONE=
+	local CMDS=("${@}")
+	local IFS=$'\n'
+	local PMSG="Press any key to repeat command, or 'q' to quit. "
+	local RUN_METHOD=
+	local CMD_CHECK="\
+	[[ \"\${RUN_METHOD}\" == \"\" ]] && {
+		echo -e \"---------------------------------------------------\";
+		read -p\"\${PMSG}\" -n1 CHAR;
+		case \"\${CHAR}\" in
+			a) echo \" RUN ALL REMAINING\"; RUN_METHOD=A; CUR=\$((\${CUR}+1)) ;;
+			p)	[[ \${CUR} == 0 ]] && {
+					echo \" ALREADY AT FIRST COMMAND.\"; break; } || {
+					echo \" PREVIOUS\"; CUR=\$((\${CUR}-1));
+				}
+			;;
+			q) echo \" QUIT\"; DONE=1; break ;;
+			r) echo \" RESTART\"; break ;;
+			*) [[ \"\${CHAR}\" != \"\" ]] && echo \" NEXT\"
+				CUR=\$((\${CUR}+1)) ;;
+		esac
+	} || {
+		CUR=\$((\${CUR}+1))
+	}"
+	#--- Runs all remaining in the iteration, if nonzero.
+	local RUN_METHOD=
 	while [ -z "${DONE}" ]; do
-		eval "${@}"
-		echo -e "-------------------------------------------------"
-		read -p "Press any key to repeat command, or 'q' to quit. " -n1 C
-		[[ "${C}" == "q" ]] && DONE=1
+		local CUR=0
+		while (( ${CUR} < ${#CMDS[@]} )); do
+			eval "${CMDS[${CUR}]}"
+			eval "${CMD_CHECK}"
+		done
+		[[ "${RUN_METHOD}" != "" ]] && {
+			RUN_METHOD=
+			eval "${CMD_CHECK}"
+		}
 	done
 }
+
+# vim: ft=sh tabstop=3
