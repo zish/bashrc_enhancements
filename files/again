@@ -1,0 +1,148 @@
+# Author: Jeremy Melanson <jmelanson@systemhalted.com>
+#
+# Changelog:
+# 2017-04-10 - JM : Initial pre-alpha, usable version created.
+#
+# TODO:
+
+#--- Useful little function that repeats a command each time a key is pressed.
+# The loop can be interacted with, using the following keystrokes:
+# 'a' - "all"; Run all commands remaining in the current loop iteration.
+#			Re-prompt user after the final command.
+# 'h' - "help"; Display help text.
+# 'w' - "rewind"; Rewind to the command run before the most recent, and execute it.
+# 'n' - "next"; Run the 'next' command in the sequence. Restarts the loop if necessary.
+# 'p' - "previous"; Re-run the previous command in the sequence.
+# 'q'	- Quit.
+# 'r' - Restart (Re-run the commands, starting from the first one).
+again () {
+	local CMDS=("${@}")
+	local IFS=$'\n'
+	local PMSG="COMMAND ('h' for help)) -> "
+	local HELP_MSG="USAGE:
+  'a': Run all remaining commands in list.
+  'p': Re-run 'p'revious command.
+  'h': Display this help text.
+  'n': Run next command in list
+  'q': Quit.
+  'r': restart from the beginning.\n
+  'w': Rewind and run the command before the last one."
+	local SEPARATOR_LINE="---------------------------------------------------"
+	local EXEC_DATA='
+		echo -e "\n**** COMMAND ${CUR} (${CMDS[${CUR}]})\n";
+		eval "${CMDS[${CUR}]}";'
+
+	#--- Runs all remaining in the iteration, if nonzero.
+	local DONE=
+	local RUN_METHOD=
+	local PREV_METHOD=
+	while [ -z "${DONE}" ]; do
+		local CUR=-1
+		# If we are in run method 'N' (next), don't clear the value.
+		# Clear it for every other one.
+		[[ "${RUN_METHOD}" != "N" ]] && RUN_METHOD=
+		while [ ${CUR} -lt ${#CMDS[@]} ]; do
+			PREV_METHOD=${RUN_METHOD}
+
+			# Only run the next command if the previous one wasn't 'unknown'.
+			if [[ "${RUN_METHOD}" == "U" ]]; then
+				RUN_METHOD=
+			# Display help text, and revert to run method 'S'.
+			elif [[ "${RUN_METHOD}" == "H" ]]; then
+				echo -e "${SEPARATOR_LINE}\n${HELP_MSG}"
+				RUN_METHOD=
+			elif [[ "${RUN_METHOD}" != "" ]]; then
+				if [[ "${RUN_METHOD}" == "A" ]]; then
+					CUR=$((${CUR}+1))
+				elif [[ "${RUN_METHOD}" == "P" ]]; then
+	#			if [[ "${RUN_METHOD}" == "P" ]]; then
+#					CUR=$((${CUR}+1))
+					RUN_METHOD=
+				elif [[ "${RUN_METHOD}" == "W" ]]; then
+#					CUR=$((${CUR}+1))
+					RUN_METHOD=
+				elif [[ "${RUN_METHOD}" == "N" ]]; then
+					CUR=$((${CUR}+1))
+					RUN_METHOD=
+				fi
+				eval "${EXEC_DATA}"
+			fi
+
+			if [[ ${CUR} -ge ${#CMDS[@]} ]]; then
+				break
+			fi
+
+			# Only prompt the user for input if we're not in run method 'A'.
+			[[ "${RUN_METHOD}" == "" ]] && {
+				echo -e "${SEPARATOR_LINE}"
+				read -p"${CUR} ${PMSG}" -n1 CHAR;
+				case "${CHAR}" in
+					a)
+						RUN_METHOD=A
+						echo -e " RUN ALL REMAINING"
+					;;
+					h)
+						RUN_METHOD=H
+						echo -e "HELP"
+					;;
+					w)
+						local P=${CUR}
+#						CUR=$((${CUR}-1))
+						if [ ${CUR} -le 0 ]; then
+							CUR=$((${#CMDS[@]}-1))
+#						elif [ ${CUR} -lt 0 ]; then
+#							CUR=$((${#CMDS[@]}-2))
+						else
+							CUR=$((${CUR}-1))
+						fi
+						if [ ${CUR} -lt 0 ]; then
+							CUR=0
+						fi
+						RUN_METHOD=W
+						echo -e " REWIND ${P} (${CUR})"
+					;;
+					b|p)
+						local P=${CUR}
+#						[[ ${CUR} == 0 ]] && {
+#							CUR=$((${#CMDS[@]}-1))
+#						} || {
+#							CUR=$((${CUR}-1))
+#						}
+						RUN_METHOD=P
+						echo -e " PREVIOUS ${P} (${CUR})"
+					;;
+					q)
+						DONE=1
+						echo -e " QUIT"
+						break
+					;;
+					r)
+						echo -e " RESTART"
+						break
+					;;
+					n)
+						local P=${CUR}
+						# If the previous run method was W (rewind), we increment CUR.
+						[[ "${PREV_METHOD}" == "W" ]] && CUR=$((${CUR}+1))
+						RUN_METHOD=N
+						echo -e " NEXT ${P} (${CUR})"
+					;;
+					*)
+						# Pressing space or enter should work the same as pressing 'n'.
+						[[ "${CHAR}" =~ ^\ ?$ ]] && {
+							local P=${CUR}
+							RUN_METHOD=N
+							echo -e " NEXT (${P})"
+						} || {
+							# u == unknown command
+							RUN_METHOD=U
+							echo -e " ***UNKNOWN***"
+						}
+					;;
+				esac
+			}
+		done
+	done
+}
+
+# vim: ft=sh tabstop=3

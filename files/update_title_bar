@@ -1,0 +1,86 @@
+#-- update_title_bar
+# This is primarily intended for Linux systems, but will likely work for any modern BaSH version.
+#
+# Author: Jeremy Melanson
+#
+# Source-code, documentation and revision Git repository: https://github.com/zish/bashrc_enhancements
+#
+# Last-Modified: 2016-09-08
+#
+# $ git clone https://github.com/zish/bashrc_enhancements
+#
+# To use this, source the file from your .bashrc (or .bash_profile).
+#
+#
+# This file is part of bashrc_enhancements.
+#
+#    bashrc_enhancements is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    bashrc_enhancements is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+update_title_bar () {
+  #--- Initialize the PROMPT_COMMAND and trap, if the first arg is "init".
+  [[ "${1}" == "init" ]] && {
+    [[ "${PROMPT_COMMAND}" != "" ]] && PROMPT_COMMAND+=";"
+    PROMPT_COMMAND+='update_title_bar 0 ${SHELL}'
+    trap 'update_title_bar ${0}' DEBUG
+  #--- Set some text replacment defaults.
+    [[ -z "${UTB_TEXT_REPLACE[*]}" ]] && {
+      UTB_TEXT_REPLACE=(
+        "${HOME}"   '~'
+      )
+    }
+  }
+  local BCMD="${BASH_COMMAND}"
+  #--- the trap command associated with this function passes ${0} as an argument.
+  # If this valye exists, we should be able to assume that we are running in a
+  # script (or during source'ing our bashrc file(s).
+  # The idea is to skip any scripted or source'd commands.
+  local IN_SCRIPT="${1}"
+  local MANUAL_CMD="${2}"
+  #--- Entering a second arg to this function overrides the output of the command name.
+  [[ "${MANUAL_CMD}" != "" ]] && BCMD="${MANUAL_CMD}"
+  local CMDRGX="${BCMD//\\/\\\\}"; CMDRGX="${CMDRGX//\//\\\/}"; CMDRGX="${CMDRGX//\$/\\\$}"
+  CMDRGX="${CMDRGX//\{/\\\{}"; CMDRGX="${CMDRGX//\}/\\\}}"
+  #--- Skip any commands that we've deemed to be "scripted".
+  [[ "${IN_SCRIPT}" == "IN" ]] && {
+    return
+  #--- Skip any commands that exist in PROMPT_COMMAND
+  # WARNING: Bear in mind that manually-entered commands that match are also ignored.
+  } || [[ ! "${PROMPT_COMMAND}" =~ ${CMDRGX} ]] && { 
+    #--- If BCMD is trying to set the terminal title, we don't do anything.
+    [[ ! "${BCMD}" =~ \\e\]0\; ]] && {
+      local OUT=
+      #--- Make the title more noticable, if running with root privileges.
+      [[ ${EUID} == 0 ]] && OUT+="(ROOT_USER) " || OUT+="${USER}@"
+      OUT+="${HOSTNAME}:"
+      OUT+="${PWD} "
+      OUT+="[${BCMD}]"
+      local R=
+      for ((E=0; E<${#UTB_TEXT_REPLACE[@]}; E+=2)); do
+        local R="${UTB_TEXT_REPLACE[$E]}"
+        local RGX="${R//\\/\\\\}"; RGX="${RGX//\//\\\/}"; RGX="${RGX//\$/\\\$}";
+        RGX="${RGX//\{/\\\{}"; RGX="${RGX//\}/\\\}}"
+        [[ "${OUT}" =~ ${RGX} ]] && {
+          OUT="${OUT//${RGX}/${UTB_TEXT_REPLACE[$((${E}+1))]}}"
+        }
+      done
+      echo -ne "\e]0;${OUT}\007"
+    }
+  }
+} # END _update_title_bar
+
+#--- Some stuff needs to be initialized, for things to work correctly.
+update_title_bar init
+
+# vim: ft=sh

@@ -44,7 +44,7 @@ tar () {
 	   local OIFS=${IFS}; IFS=$'\n'
 	   for ERR in ${STDERR}; do
 	      if [[ ! ${ERR} =~ .*[Hh]eader\ [Kk]eyword\ [\"\']SCHILY.* ]]; then
-				echo "ERR: ${ERR}"
+				echo "${ERR}"
 			fi
 	   done
    	IFS=${OIFS}
