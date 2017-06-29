@@ -45,28 +45,53 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
-#-- These are a couple helper functions to support addpath.
-__addpath_verb () { [[ ${VERB} ]] && echo "-- ${1}."; }
-__addpath_join () { local IFS=":"; echo "${*}"; }
-
 addpath () {
+  #-- Enable the use of embedded regular expressions (if not already set)
+  shopt -s extglob
+
   local NEW=${1}
   local PPOS=;
   [[ ${2} ]] && PPOS=${2}
   #-- Add a little verbosity if this is nonzero.
   # Useful for debugging things, if needed.
   local VERB=${3}
-  #-- Read PATH into an associative array (automatically removes duplicates).
-  declare -A CPATHS
-  local OIFS=${IFS}; local IFS=':'; local C=0
-  for P in ${PATH}; do
-    CPATHS[${P}]=${C}
-    C=$((${C} + 1))
-  done
-  local IFS=${OIFS}
 
-  #-- Enable the use of embedded regular expressions (if not already set)
-  shopt -s extglob
+  #-- These are a couple helper functions to support addpath.
+  __addpath_verb () { [[ ${VERB} ]] && echo "-- ${1}."; }
+  __addpath_join () { local IFS="${AP_VAR_DELIM}"; echo "${*}"; }
+  __addpath_clean () { local IFS="${AP_VAR_DELIM}"; echo "${*}"; }
+
+  #-- Default variable to act against is 'PATH'.
+  [ -z "${AP_VAR_NAME}" ] && AP_VAR_NAME="PATH"
+  #-- Default delimiter is ':'.
+  [ -z "${AP_VAR_DELIM}" ] && AP_VAR_DELIM=":"
+
+  #-- We can't use associative arrays (hashes) in BaSH versions < 4.x).
+  (( "${BASH_VERSINFO}" >= 4 )) && {
+    #-- Read PATH into an associative array (automatically removes duplicates).
+    declare -A CPATHS
+    local OI="${IFS}"; local IFS="${AP_VAR_DELIM}"; local C=0
+    for P in ${PATH}; do
+      CPATHS[${P}]=${C}
+      C=$((${C} + 1))
+    done
+    local IFS="${OI}"
+  } || {
+    #-- We get here, if BaSH version < 4.
+    __addpath_verb "Warning: Using an old BaSH version (${BASH_VERSINFO}). "
+    __addpath_verb "Some features are disabled."
+    if [ "${PPOS}" = "first" ]; then
+      PATH="${NEW}${AP_VAR_DELIM}${PATH}"
+      __addpath_verb "Added ${NEW} to beginning of PATH"
+    elif [ "${PPOS}" = "remove" ]; then
+      __addpath_verb "Running old BaSH version. Skipping removal of '${NEW}'."
+    else
+      PATH="${PATH}${AP_VAR_DELIM}${NEW}"; export PATH
+      __addpath_verb "Added ${NEW} to end of PATH"
+    fi
+    return
+  }
+
   #-- Remove trailing '/', if it exists.
   [[ "${NEW}" =~ (.+)\/$ ]] && NEW="${BASH_REMATCH[1]}"
   #-- Make sure the directory exists, and that it wasn't
@@ -84,7 +109,12 @@ addpath () {
   for P in "${!CPATHS[@]}"; do
     local POS="${CPATHS[${P}]}"
     if [[ "${P}" == "${NEW}" ]]; then
-      __addpath_verb "${NEW} already in PATH. Adding later."
+      __addpath_verb "${NEW} already in PATH."
+      if [[ "${PPOS}" == "remove" ]]; then
+        __addpath_verb "Removal of ${NEW} requested. Continuing with task."
+      else
+        return
+      fi
     else
       PATHDIRS[${POS}]="${P}"
     fi
@@ -105,4 +135,4 @@ addpath () {
   export PATH
 }
 
-# vim: tabstop=2 expandtab
+# vim: tabstop=2 expandtab filetype=sh
