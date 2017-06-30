@@ -57,7 +57,7 @@ addpath () {
   local VERB=${3}
 
   #-- These are a couple helper functions to support addpath.
-  __addpath_verb () { [[ ${VERB} ]] && echo "-- ${1}."; }
+  __addpath_verb () { [[ ${VERB} ]] && echo "-- ${1}"; }
   __addpath_join () { local IFS="${AP_VAR_DELIM}"; echo "${*}"; }
   __addpath_clean () { local IFS="${AP_VAR_DELIM}"; echo "${*}"; }
 
@@ -81,14 +81,15 @@ addpath () {
     __addpath_verb "Warning: Using an old BaSH version (${BASH_VERSINFO}). "
     __addpath_verb "Some features are disabled."
     if [ "${PPOS}" = "first" ]; then
-      PATH="${NEW}${AP_VAR_DELIM}${PATH}"
-      __addpath_verb "Added ${NEW} to beginning of PATH"
+      eval "${AP_VAR_NAME}=\"${NEW}${AP_VAR_DELIM}$(eval "echo \${${AP_VAR_NAME}}")\""
+      __addpath_verb "Added ${NEW} to beginning of ${AP_VAR_NAME}"
     elif [ "${PPOS}" = "remove" ]; then
       __addpath_verb "Running old BaSH version. Skipping removal of '${NEW}'."
     else
-      PATH="${PATH}${AP_VAR_DELIM}${NEW}"; export PATH
-      __addpath_verb "Added ${NEW} to end of PATH"
+      eval "${AP_VAR_NAME}=\"$(eval "echo \${${AP_VAR_NAME}}")${AP_VAR_DELIM}${NEW}\""
+      __addpath_verb "Added ${NEW} to end of ${AP_VAR_NAME}"
     fi
+    export ${AP_VAR_NAME}
     return
   }
 
@@ -98,7 +99,7 @@ addpath () {
   # already added to PATH.
   [ ! -d ${NEW} ] && {
     __addpath_verb "${NEW} does not exist or is not a directory"
-    if [[ "${PPOS}" == "remove" ]]; then
+    if [ "${PPOS}" = "remove" ]; then
       __addpath_verb "Removal of ${NEW} requested. Continuing with task."
     else
       return
@@ -108,11 +109,12 @@ addpath () {
   local PATHDIRS=()
   for P in "${!CPATHS[@]}"; do
     local POS="${CPATHS[${P}]}"
-    if [[ "${P}" == "${NEW}" ]]; then
-      __addpath_verb "${NEW} already in PATH."
-      if [[ "${PPOS}" == "remove" ]]; then
+    if [ "${P}" = "${NEW}" ]; then
+      __addpath_verb "${NEW} already in ${AP_VAR_NAME}."
+      if [ "${PPOS}" = "remove" ]; then
         __addpath_verb "Removal of ${NEW} requested. Continuing with task."
       else
+        __addpath_verb "Not continuing."
         return
       fi
     else
@@ -122,17 +124,17 @@ addpath () {
 
   if [ "${PPOS}" = "first" ]; then
     PATHDIRS=(${NEW} ${PATHDIRS[@]})
-    PATH="$(__addpath_join ${PATHDIRS[@]})"
-    __addpath_verb "Added ${NEW} to beginning of PATH"
+    eval "${AP_VAR_NAME}=\"$(__addpath_join ${PATHDIRS[@]})\""
+    __addpath_verb "Added ${NEW} to beginning of ${AP_VAR_NAME}"
   elif [ "${PPOS}" = "remove" ]; then
-    __addpath_verb "Removal of ${NEW} requested. Not re-adding to PATH."
-    PATH="$(__addpath_join ${PATHDIRS[@]})"
+    __addpath_verb "Removal of ${NEW} requested. Not re-adding to ${AP_VAR_NAME}."
+    eval "${AP_VAR_NAME}=\"$(__addpath_join ${PATHDIRS[@]})\""
   else
     PATHDIRS=(${PATHDIRS[@]} ${NEW})
-    PATH="$(__addpath_join ${PATHDIRS[@]})"
-    __addpath_verb "Added ${NEW} to end of PATH"
+    eval "${AP_VAR_NAME}=\"$(__addpath_join ${PATHDIRS[@]})\""
+    __addpath_verb "Added ${NEW} to end of ${AP_VAR_NAME}"
   fi
-  export PATH
+  export ${AP_VAR_NAME}
 }
 
 # vim: tabstop=2 expandtab filetype=sh
