@@ -1,13 +1,12 @@
 #- SSH interception subroutine with a lot great extras.
-# This was written originally to eliminate the need to copy or clone a custom .bashrc to remote systems,
+# This was written originally to eliminate the need to copy or clone a custom
+# .bashrc to remote systems,
 #
 # Author: Jeremy Melanson
-#
-# Source-code, documentation and revision Git repository: https://github.com/zish/bashrc_enhancements
-#
-# Author: Jeremy Melanson
-#
 # Last-Modified: 2016-09-08
+#
+# Source-code, documentation and revision Git repository:
+#  https://github.com/zish/bashrc_enhancements
 #
 # $ git clone https://github.com/zish/bashrc_enhancements
 #
@@ -16,11 +15,15 @@
 #
 # Features:
 #  * Allows you to take your PS1 prompt with you.
-#    - Prepends the remote prompt with "(SSH)", to visually indicate that it is an SSH session.
-#  * Any aliases defined locally at run time will be defined in your remote session automatically.
-#  * Select embedded functions can be cloned to your remote SSH session, by adding them to SSHI_ADD_SUBS, (defined below),
-#  * Specific ranges of ines in your .bashrc can be cloned to your remote SSH session, using
-#    a special '# [SSH_INCLUDE nn]' remarkbefore the lines without needing to copy them everywhere.
+#    - Prepends the remote prompt with "(SSH)", to visually indicate that it
+#     is an SSH session.
+#  * Any aliases defined locally at run time will be defined in your remote
+#     session automatically.
+#  * Select embedded functions can be cloned to your remote SSH session,
+#     by adding them to SSHI_ADD_SUBS, (defined below),
+#  * Specific ranges of ines in your .bashrc can be cloned to your remote
+#     SSH session, using a special '# [SSHI_INCLUDE nn]' remark before the
+#     lines without needing to copy them everywhere.
 #
 #
 # This file is part of bashrc_enhancements.
@@ -38,63 +41,60 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
-#- This is similar to 'tee', but is an embedded perl script. This allows for log output filtering (TODO).
-#  -(1)- : \$mb == Maximum size of each buffer before filtering and flushing to log file.
-#          If you use a filter that requires a fairly long sample of characters, you may need to increase
-#          this number. Use this guide:
-#           1. Roughly estimate the maximum bytes needed to apply the filter. Rounding up is recommended.
-#           2. Multiply this number by 3.
-#           3. Modify \$mb=XXXX declaration in the alias to reflect this number.
-#          ** This alias uses 2 capture buffers, and runs filters against both, then halfway between them.
-#  -(2)- : \$b == Which data capture buffer to fill.
-#  -(3)- : @b == Data capture 'b'uffers. We flip between them to facilitate log filtering.
-#  -(4)- : \$o == 'o'verflow capture. This is for facilitating filtering. We don't want text cut between buffers.
-#  -(2)- : \$l == Output 'l'og filehandle.
-#  -(2)- : \$c == Holder for each 'c'haracter captured.
-alias __sshi_l="perl -MIO::Handle -e '#This is a required component for the SSH BaSH Intercept function.
-#part of the bashrc_enhancements project.
-use strict;
-my (\$l,\$c,\$o);
-my @b=(\"\");
-my \$b=1;
- my \$filt = \"^\\<--\\ More\\ ---\\>\" . chr (13);
- my \$mb=1000; #-(1)-
-
- exit(1)if(!\$ARGV[0]);
-
- \$SIG{INT}=\"IGNORE\";
- if(open(\$l,\">\",\$ARGV[0])){
-  \$l->autoflush(1);
-  STDOUT->autoflush(1);
-  while(!eof (STDIN)){
-   \$c=getc(STDIN);
-   print \$c;
-#-(2)-
-   if((length(\$b[1])>=\$mb)||(\$c eq \"\\r\"||\$c eq \"\\n\")){
-    out();
-   }
-   \$b[1].=\$c;
-  }
-  close(\$l);
- }else{
-  die(ord(7).ord(7).ord(7).\"Problem writing to \\\"\".\$ARGV[0].\"\\\":\".\$!.\"\\n\");
- }
-
-sub out{
- if((length(\$b[1])>=\$mb)||(\$c eq \"\\r\"||\$c eq \"\\n\")){
-  print \$l \$b[1];
-  \$b[1]=undef;
-# }else{
-
- }
-}' --"
 
 
+#-- The '__sshi_l' alias is similar to 'tee', but is an embedded perl script.
+#  This allows for log output filtering (TODO), and keeps external tool
+#  dependencies to a minimum.
+#
+#  ** SSHI WILL NOT USE THIS IF THE PROVIDED PERL VERSION IS < 5.18.       **
+#  ** IT WILL INSTEAD FALL BACK TO USING 'tail -i', WHICH DOES NOT PROVIDE **
+#  ** FILTERING CAPABILITIES.
+#
+# __ COMMENTS have been moved from embedded Perl, and replaced with pointers.__
+# __ This is to decrease the in-memory size of the ssh intercept function.   __
+# __ BaSH Comments are omitted from in-memory, but embedded strings          __
+# __  are left alone.                                                        __
+#
+#  (1)- : \$mb == Maximum size of each buffer before filtering and flushing
+#         to log file.
+#         If you use a filter that requires a fairly long sample of
+#         characters, you may need to increase this number. Use this guide:
+#          1. Roughly estimate the maximum bytes needed to apply the filter.
+#             Rounding up is recommended.
+#          2. Multiply this number by 3.
+#          3. Modify \$mb=XXXX declaration in the alias to reflect
+#             this number.
+#         ** This alias uses 2 capture buffers, and runs filters against both,
+#         ** then halfway between them.
+#  (2)- : \$b == Which data capture buffer to fill.
+#  (3)- : @b == Data capture 'b'uffers. We flip between them to facilitate log
+#          filtering.
+#  (4)- : \$o == 'o'verflow capture. This is for facilitating filtering.
+#         We don't want text cut between buffers.
+#  (2)- : \$l == Output 'l'og filehandle.
+#  (2)- : \$c == Holder for each 'c'haracter captured.
+alias __sshi_l="perl -MIO::Handle -e '# This is a required component for the SSH BaSH Intercept function.
+# part of the bashrc_enhancements project.
+my(\$b,\$mb,\$l,\$c,\$o)=(1,1000);my@b=(\"\");
+exit(1)if(!\$ARGV[0]);\$SIG{INT}=\"IGNORE\";
+if(open(\$l,\">\",\$ARGV[0])){\$l->autoflush(1);STDOUT->autoflush(1);
+ while(!eof(STDIN)){\$c=getc(STDIN);print \$c;
+  if((length(\$b[1])>=\$mb)||(\$c eq \"\\r\"||\$c eq \"\\n\")){out();}\$b[1].=\$c;}
+ close(\$l);}
+else{die(\"Problem writing to \\\"\".\$ARGV[0].\"\\\":\".\$!.\"\\n\");}
+sub out{if((length(\$b[1])>=\$mb)||(\$c eq \"\\r\"||\$c eq \"\\n\")){print \$l \$b[1];\$b[1]=undef;}}' --"
 
-#- Modification of anything within this section requires you to reread your rc or restart bash.
+
+#-- Modification of anything within this section requires you
+# to reread your rc or restart bash.
 ssh () {
-#- Set the configuration defaults, if no global override have been set.
-# ** DO NOT MODIFY THESE DIRECTLY. THEY SHOULD BE DEFINED IN YOUR LOCAL bashrc. **
+
+#-- Subroutine to set the configuration defaults, if no global overrides
+# have been set.
+#
+# ** DO NOT MODIFY THESE DIRECTLY. THEY      **
+# ** SHOULD BE DEFINED IN YOUR LOCAL bashrc. **
 _sshi_defaults () {
  local IFS=$'\n'
  while read -r L; do
@@ -122,15 +122,15 @@ _sshi_defaults () {
 EOF
 }
 
-#- Format and output local error messages.
+#-- Format and output local error messages.
 _sshi_err () {
- local S="****************"
- echo -ne "${S}\n\a\a\aWARNING: ${1}${S}\n"
+ local S="****************\n"
+ echo -e "${S}\a\a\aWARNING: ${1}${S}"
 }
 
-#- Get SSH hostname and scan conf(s). Missing files are ignored.
+#-- Get SSH hostname and scan conf(s). Missing files are ignored.
+# $1 is user config. $2 is main conf. Rest are SSH options.
 _sshi_scancnf () {
-#- $1 is user config. $2 is main conf. Rest are SSH options.
  local CF=()
  local OP=()
  [ -f "${1}" ] && CF=(${1})
@@ -140,32 +140,26 @@ _sshi_scancnf () {
   [ ${C} -ge ${#CF[@]} ] && OP=(${OP[@]} ${O})
   C=$((${C}+1))
  done
-#- SSH Command line option knowledge.
+#-- SSH Command line option knowledge.
 # These are the known options for my installed OpenSSH version (v.7.2p2).
-#- COMMENTS have been moved from embedded Perl, and replaced with pointers.
-# This is to decrease the in-memory size of the ssh intercept function.
-# BaSH Comments are omitted from in-memory, but embedded strings are left alone.
-#  -(1)- : Opts with NO argument. ( $sw )
-#  -(2)- : Opts WITH AN argument. ( $op )
-#  -(3)- : Decouple user@ prefix.
-#  -(4)- : Only host lines
-#  -(5)- : Escape wildcard types
+#  (1)- : Opts with NO argument. ( $sw )
+#  (2)- : Opts WITH AN argument. ( $op )
+#  (3)- : Decouple user@ prefix.
+#  (4)- : Only host lines
+#  (5)- : Escape wildcard types
  cat ${CF[@]} | perl -e '
   sub o{$l="local ";$r="^\\s*$_[1]";print $l.$_[0]."\n"if((!$_[1])||(grep(/$r/,@{$_[2]})));}
-  $sw="^\\-[1246AaCfGgKkMNnsTtVvXxYy]";$op="^\\bcDEeFIiLlmOopQqRSWw]"; #-(1)- & -(2)-
+  $sw="^\\-[1246AaCfGgKkMNnsTtVvXxYy]";$op="^\\bcDEeFIiLlmOopQqRSWw]"; #(1)- & (2)-
   $sh="";while($ar=shift(@ARGV)){if($ar=~/$op/){shift(@ARGV);}elsif(!($ar=~/$sw/)){$sh=$ar;}}
-  $sh=~s/^\w+\@//;o("SSH_HOST=$sh");while(<STDIN>){ #-(3)-
-   $p=$_;%rt=("\\."=>"\\.","\\*"=>".*","\\?"=>"."); #-(4)-
-   if($p=~/^\s*host\s+([^\#]+)\#?([^\#]*)/i){ #-(5)-
+  $sh=~s/^\w+\@//;o("SSH_HOST=$sh");while(<STDIN>){ #(3)-
+   $p=$_;%rt=("\\."=>"\\.","\\*"=>".*","\\?"=>"."); #(4)-
+   if($p=~/^\s*host\s+([^\#]+)\#?([^\#]*)/i){ #(5)-
     $ch=$1;$a=$2;@h=($ch=~/([^\s\,]+)/g);foreach $H(@h){
-     foreach $e(sort{$b cmp $a}(keys(%rt))){$H=~s/$e/$rt{$e}/g;} #-(6)-
-     $H="^($H)\$";if($sh=~/$H/){@O=split(/\s*\,\s*/,$a);
-      o("S_F=$sh");o("S_LG=1","LOGFILE",\@O);
-      o("S_NL=1","NOLOG",\@O);o("NOPROMPT=1","NOPROMPT",\@O);
-      o("PROMPTONLY=1","PROMPTONLY",\@O);exit;}}}}' -- ${OP[@]}
+     foreach $e(sort{$b cmp $a}(keys(%rt))){$H=~s/$e/$rt{$e}/g;} #(6)-
+     $H="^($H)\$";if($sh=~/$H/){@O=split(/\s*\,\s*/,$a);o("S_F=$sh");o("S_LG=1","LOGFILE",\@O);o("S_NL=1","NOLOG",\@O);o("NOPROMPT=1","NOPROMPT",\@O);o("PROMPTONLY=1","PROMPTONLY",\@O);exit;}}}}' -- ${OP[@]}
 }
 
-#- Clean the SSH Logs dir.
+#-- Clean the SSH Logs dir.
 # Removes .log files smaller than ${SSHI_LOG_MIN_SIZE} and compress .log files
 # older than ${SSHI_LOG_CMP_AGE}.
 _sshi_clean_log_dir () {
@@ -182,6 +176,7 @@ _sshi_clean_log_dir () {
   return
  }
  local F=
+ #- TODO: Replace find/grep with native BaSH or embedded Perl.
  for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -printf "%Cs %s %p\n"|grep -e "\.log$"); do
   [[ "${F}" =~ ^([0-9]+)\ ([0-9]+)\ (.*) ]] && {
    local D="$(((${CT}-${BASH_REMATCH[1]})/86400))"
@@ -200,24 +195,24 @@ _sshi_clean_log_dir () {
  done
 }
 
-#- Pull requested functions defined by SSHI_ADD_SUBS.
+#-- Pull requested functions defined by SSHI_ADD_SUBS.
 # and lines in rc file marked by [SSHI_INCLUDE XX] remarks.
 #  -(1)- : $b stands for {b}rackets.
 #  -(2)- : Grab [SSHI_INCLUDE] sections in bashrc.
-#          * GETS BOTH SSH_INCLUDE AND SSHI_INCLUDE. The former will be deprecated soon.
+#          * GETS BOTH SSH_INCLUDE AND SSHI_INCLUDE.
+#            SSH_INCLUDE will be deprecated in the near future.
 _sshi_getrc () {
  set | /usr/bin/perl -e '$rc=shift(@ARGV);my%addSubs;foreach my$f(@ARGV){$addSubs{$f}=1;}
-  my$b;foreach my$l(<STDIN>){
-   if($l=~/^\s*(\S+)\s+\([^\(\)]*\)\s*$/){$b=$1;} #-(1)-
-   print $l if($addSubs{$b});$b=undef if($l=~/^\}\s*([\;\#]?.*)/);}
-  my$rcFh;open($rcFh,"<",$rc)||die("Cannot open rc file $rc: $!");
-  my@rc=<$rcFh>;close($rcFh);
-  my($i,$c,$incPos);foreach my$l(@rc){ #-(2)-
-   if($l=~/^\s*\#\s*\[SSHI?_INCLUDE\]\s+(\d+)/){$i=$1;}
-   if($i){if($c<=$i){print$l;$c++;}else{$c=0;$i=0;}}}' -- ${@}
+ my$b;foreach my$l(<STDIN>){
+  if($l=~/^\s*(\S+)\s+\([^\(\)]*\)\s*$/){$b=$1;} #-(1)-
+  print $l if($addSubs{$b});$b=undef if($l=~/^\}\s*([\;\#]?.*)/);}
+ my$f;open($f,"<",$rc)||die("Cannot open rc file $rc: $!");my@rc=<$f>;close($f);
+ my($i,$c,$incPos);foreach my$l(@rc){ #-(2)-
+  if($l=~/^\s*\#\s*\[SSHI?_INCLUDE\]\s+(\d+)/){$i=$1;}
+  if($i){if($c<=$i){print$l;$c++;}else{$c=0;$i=0;}}}' -- ${@}
 }
 
-#- TODO: Package external files for inclusion.
+#-- TODO: Package external files for inclusion.
 _sshi_package_include_files () {
  for I in "${SSHI_INC_FILES[@]}"; do
   [[ ${I} =~ ^([^:]+):([^:]+)$ ]] && {
@@ -228,7 +223,8 @@ _sshi_package_include_files () {
  done
 }
 
-#- Retry execution of a task for a maximum number of tries, pausing every 0.1$RANDOM seconds.
+#-- Retry execution of a task for a maximum number of tries, pausing
+# every 0.1$RANDOM seconds.
 _sshi_retry_task () {
   local OP=(${@})
   #- MR == Max. Retries before giving up.
@@ -249,42 +245,44 @@ _sshi_retry_task () {
   echo -e "R_O=\"${OUT}\";R_T=${LP}"
 }
 
-#- Use Perl for BASE64 encode/decode. This eliminates the need to
+#-- Use Perl for BASE64 encode/decode. This eliminates the need to
 # keep track of different encode/decode tools and their cmd line opts.
 local S_BE="perl -MMIME::Base64 -e '\$f=join(\"\",<STDIN>);print encode_base64(\$f,\"\");'"
 local S_BD="perl -MMIME::Base64 -e '\$f=join(\"\",<STDIN>);print decode_base64(\$f);'"
 
-#- Get/set SSHI variable defaults.
+#-- Get/set SSHI variable defaults.
 eval "$(_sshi_defaults)"
 eval "$(_sshi_scancnf ${SSHI_UC} ${SSHI_MC} ${@})"
 
-#- Log file name format.
+#-- Log file name format.
 local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
-#- Determine if we should log.
+#-- Determine if we should log.
 [ -n "${SSHI_IS_SSH}" ] && [ -n "${SSHI_NO_LOG_REMOTE}" ] && {
  S_NL=1
  unset S_LF
 } || {
-# Log by default. Turn off logging when requested.
+ #- Log by default. Turn off logging when requested.
  [ -n "${SSHI_LOG_BY_DEF}" ] && {
   [ -n "${S_NL}" ] && unset S_LG S_NL || S_LG=1
  } || {
-# Do not log by default. Turn on logging when requested.
+ #- Do not log by default. Turn on logging when requested.
   [ -n "${S_LG}" ] && local S_LG=1
  }
-#- Make sure log location is writable.
+ #- Make sure log location is writable.
  [ -n "${S_LG}" ] && {
   local S_LF="${SSHI_LOG_LOC}/${S_LFM}"
  #- Create SSH log directory if needed.
   [ -n "${SSHI_LOG_LOC}" ] && {
    [ -n ${SSHI_CREATE_LOG_LOC} ] && {
     [ ! -e ${SSHI_LOG_LOC} ] && {
-     mkdir -p ${SSHI_LOG_LOC} || _sshi_err "Unable to create dir:\n   ${SSHI_LOG_LOC}."
+     mkdir -p ${SSHI_LOG_LOC} || \
+      _sshi_err "Unable to create dir:\n   ${SSHI_LOG_LOC}."
     }
    }
   }
   #- Make sure log directory is writeable. Try twice, after pausing for a bit.
-  # The length is randomized to compensate for > 2 simultaneous SSH sessions vying for the file.
+  # The length is randomized to compensate for > 2 simultaneous SSH sessions
+  # vying for the file.
   local WT=${SSHI_LOG_LOC}/.SSHI_WRITE_OK
   local S_E=0
   local OK=
@@ -314,34 +312,34 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
 #- Parse things and connect if we have a matched entry in the SSH config.
 [ -n "${S_F}" ] && {
  local SSHREMCMD= #- Holds contents of commands to run on remote host.
-#- PROMPTONLY set on a host .ssh/config. Set things accordingly.
+ #- PROMPTONLY set on a host .ssh/config. Set things accordingly.
  [ -n "${PROMPTONLY}" ] && {
   [ -n "${SSHI_RPS1}" ] && {
-   echo -e "Connecting to ${S_F} with local prompt.\n"
+   echo "Connecting to ${S_F} with local prompt."
    SSHREMCMD="export PS1=\"${SSHI_RPS1}\";exec bash"
   }
  } || {
- #- The rcfile to use remotely. Regenerates every time you log in.
- # local .bashrc will be called at the end. Overrides can be defined on the remote.
- # This variable is exported for use on remote systems.
+  #- The rcfile to use remotely. Regenerates every time you log in.
+  # local .bashrc will be called at the end. Overrides can be defined on the remote.
+  # This variable is exported for use on remote systems.
   [ -z "${RCPUSH}" ] && RCPUSH=".bashrc_pushed-${USER}"
- #- Add an alias to bash (use your customized bash env).
+  #- Add an alias to bash (use your customized bash env).
   local USH="alias bash='/bin/bash --rcfile ~/${RCPUSH}'"
- #- Code to determine user's local RC ( ${LRC} )
+  #- Code to determine user's local RC ( ${LRC} )
   local LRC='for F in .bashrc .bash_profile .profile;do [ -e ~/${F} ]&&{ echo ${F};break;};done'
   local RBASHRC='. $('"${LRC}"');'
   [ -n "${SSHI_RPS1}" ] && RBASHRC+="export PS1=\"${SSHI_RPS1}\""
   local RBASHRC_E
   echo -e "Connecting to ${S_F} with local shell includes.\n"
 
- #- Had a problem with the embedded __sshi_l alias with older Perl versions.
- # Not going to figure it out for now.
- # We fall back to "tee -i", if the version is lower than 5.18.
+  #- Had a problem with the embedded __sshi_l alias with older Perl versions.
+  # Not going to figure it out for now.
+  # We fall back to "tee -i", if the version is lower than 5.18.
   PC="perl -e 'use v5.18;' 2>/dev/null;[ \${?} -gt 0 ]&&{ echo;
    OPERL=1;echo '**** WARNING: Perl version is earlier than 5.18.     ****';
    echo '**** Using tee -i for logging (NO OUTPUT FILTERING). ****';echo;}"
   eval "${PC}"
- #- Gather aliases.
+  #- Gather aliases.
   local S_A=
   local OI=${IFS}
   IFS=$'\n'
@@ -355,10 +353,10 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
    S_A="${S_A}${A};"
   done
   IFS=${OI}
- #- Use RCPUSH file if in an SSH session. Allows you to reuse your shipped stuff when
- # using ssh on remote systems.
- # ** This only really matters when ssh is included in SSHI_ADD_SUBS.
- # Attempt to use pushed rc if SSH. Use local rc if non-SSH
+  #- Use RCPUSH file if in an SSH session. Allows you to reuse your shipped stuff when
+  # using ssh on remote systems.
+  # ** This only really matters when ssh is included in SSHI_ADD_SUBS.
+  # Attempt to use pushed rc if SSH. Use local rc if non-SSH
   local RC=
   [ -n "${SSHI_IS_SSH}" ] && [ -e "~/${RCPUSH}" ] && {
    RC="~/${RCPUSH}"
@@ -366,9 +364,9 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
   } || {
    RC=~/$(eval ${LRC})
   }
- #- Retrieve SSHI_ADD_SUBS functions and [SSH_INCLUDE] lines.
- # Functions need to be decoded before 'source'ing them (for some reason). Decoded output is
- # piped to RCPUSH.funcs file, which is sourced from the pushed rc file.
+  #- Retrieve SSHI_ADD_SUBS functions and [SSH_INCLUDE] lines.
+  # Functions need to be decoded before 'source'ing them (for some reason). Decoded output is
+  # piped to RCPUSH.funcs file, which is sourced from the pushed rc file.
   local RFUNCS="export RCPUSH=${RCPUSH};$(_sshi_getrc ${RC} ${SSHI_ADD_SUBS})"
   local RFUNCS_E="sleep 0.2;echo \"$(echo "${RFUNCS}"|eval ${S_BE})\"|${S_BD}>~/${RCPUSH}.funcs;. ~/${RCPUSH}.funcs"
   RBASHRC_E="export SSHI_IS_SSH=1;${S_A}${RFUNCS_E};${RBASHRC}"
@@ -377,7 +375,7 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
   local SSHREMCMD="echo \"${RBASHRC_E}\">~/${RCPUSH};exec bash --rcfile ~/${RCPUSH}"
  }
 }
-#- Compile the SSH command to run (including logging stuff) and run it.
+#-- Compile the SSH command to run (including logging stuff) and run it.
 local LC=
 local SSHEXEC=("${SSHI_SSH_BIN}" ${@})
 [ -n "${SSHREMCMD}" ] && SSHEXEC=(${SSHEXEC[@]} "-t" "${SSHREMCMD}")
@@ -393,16 +391,16 @@ local SSHEXEC=("${SSHI_SSH_BIN}" ${@})
 } || {
  ${SSHEXEC[*]}
 }
-#- Logging report.
-echo "------------------------------------------------"
+#-- Logging report.
+echo "------------------------------"
 [ -n "${S_LG}" ] && {
  [ -n "${S_LF}" ] && {
- #- Report the log file name, if it is not zero-length. Otherwise remove the file.
- #- Report the session log path, but not if zero-length.
+  #- Report the log file name, if it is not zero-length. Otherwise remove the file.
+  #- Report the session log path, but not if zero-length.
   [ -s "${S_LF}" ] && {
    echo "Session logged to ${S_LF}"
   } || {
-  #- Warn the user of zero-length log, and clear the file.
+   #- Warn the user of zero-length log, and clear the file.
    echo "No output logged from session. Removing ${S_LF}"
    rm "${S_LF}"
   }
