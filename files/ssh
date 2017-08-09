@@ -142,21 +142,53 @@ _sshi_scancnf () {
  done
 #-- SSH Command line option knowledge.
 # These are the known options for my installed OpenSSH version (v.7.2p2).
-#  (1)- : Opts with NO argument. ( $sw )
-#  (2)- : Opts WITH AN argument. ( $op )
-#  (3)- : Decouple user@ prefix.
-#  (4)- : Only host lines
-#  (5)- : Escape wildcard types
+#  (1)-  : Opts with NO argument. ( $sw )
+#  (2)-  : Opts WITH AN argument. ( $op )
+#  (3)-  : Decouple user@ prefix.
+#  (4)-  : Only host lines
+#  (5)-  : Escape wildcard types
+#  (6)-  : The first unrecognized option entered will be considered the "host".
+#  (7)-  : sh == SSH Host (and user, if defined).
+#  (8)-  : sc == SSH Remote Command
+#  (9)-  : If the SSH Host has been defined, we assume the first unregonized
+#          opt is a remote command to exec.
+#  (10)- : If the SSH Remote Command is nonzero, we assume that anything else
+#          is an option for the remote command.
+#  (11)- : so == SSH Opts
  cat ${CF[@]} | perl -e '
-  sub o{$l="local ";$r="^\\s*$_[1]";print $l.$_[0]."\n"if((!$_[1])||(grep(/$r/,@{$_[2]})));}
-  $sw="^\\-[1246AaCfGgKkMNnsTtVvXxYy]";$op="^\\bcDEeFIiLlmOopQqRSWw]"; #(1)- & (2)-
-  $sh="";while($ar=shift(@ARGV)){if($ar=~/$op/){shift(@ARGV);}elsif(!($ar=~/$sw/)){$sh=$ar;}}
-  $sh=~s/^\w+\@//;o("SSH_HOST=$sh");while(<STDIN>){ #(3)-
-   $p=$_;%rt=("\\."=>"\\.","\\*"=>".*","\\?"=>"."); #(4)-
-   if($p=~/^\s*host\s+([^\#]+)\#?([^\#]*)/i){ #(5)-
-    $ch=$1;$a=$2;@h=($ch=~/([^\s\,]+)/g);foreach $H(@h){
-     foreach $e(sort{$b cmp $a}(keys(%rt))){$H=~s/$e/$rt{$e}/g;} #(6)-
-     $H="^($H)\$";if($sh=~/$H/){@O=split(/\s*\,\s*/,$a);o("S_F=$sh");o("S_LG=1","LOGFILE",\@O);o("S_NL=1","NOLOG",\@O);o("NOPROMPT=1","NOPROMPT",\@O);o("PROMPTONLY=1","PROMPTONLY",\@O);exit;}}}}' -- ${OP[@]}
+ sub o{
+  $r="^\\s*$_[1]";print "local ".$_[0]."\n"if((!$_[1])||(grep(/$r/,@{$_[2]})));
+ }
+ $sw="^\\-[1246AaCfGgKkMNnsTtVvXxYy]";
+ $op="^\\-[bcDEeFIiLlmOopQqRSWw]"; #(1)- & (2)-
+ $sh=""; #(7)-
+ @so=(); #(11)-
+ @sc=(); #(8)-
+ while($ar=shift(@ARGV)){
+  if(@sc){push(@sc,$ar);} #(10)-
+  elsif($ar=~/$op/){push(@so,$ar); push(@so,shift(@ARGV));}
+  elsif(($ar=~/$sw/)){push(@so,$ar);}
+  else{
+   if(!$sh){$sh=$ar;} #(6)-
+   else{push(@sc,$ar);} #(9)-
+ }}
+ push(@so,$sh);$sh=~/^((\w+)\@)?([\w\.\-_]+)/;o("SSH_HOST=$3");$sh=$3;
+ o("SSHREMCMD=\"".join(" ",@sc)."\"");o("SSH_OPTS=\"".join(" ",@so)."\"");
+ while(<STDIN>){ #(3)-
+  $p=$_;
+  %rt=("\\."=>"\\.","\\*"=>".*","\\?"=>"."); #(4)-
+  if($p=~/^\s*host\s+([^\#]+)\#?([^\#]*)/i){ #(5)-
+   $ch=$1;$a=$2;@h=($ch=~/([^\s\,]+)/g);
+   foreach $H(@h){
+    foreach $e(sort{$b cmp $a}(keys(%rt))){$H=~s/$e/$rt{$e}/g;} #(6)-
+    $H="^($H)\$";
+    if($sh=~/$H/){@O=split(/\s*\,\s*/,$a);o("S_F=$sh");
+     o("S_LG=1","LOGFILE",\@O);
+     o("S_NL=1","NOLOG",\@O);
+     o("NOPROMPT=1","NOPROMPT",\@O);
+     o("PROMPTONLY=1","PROMPTONLY",\@O);
+     exit;
+ }}}}' -- ${OP[@]}
 }
 
 #-- Clean the SSH Logs dir.
@@ -250,28 +282,38 @@ _sshi_retry_task () {
 local S_BE="perl -MMIME::Base64 -e '\$f=join(\"\",<STDIN>);print encode_base64(\$f,\"\");'"
 local S_BD="perl -MMIME::Base64 -e '\$f=join(\"\",<STDIN>);print decode_base64(\$f);'"
 
+#-- This will be populated with our "log command".
+local LC=
+
 #-- Get/set SSHI variable defaults.
 eval "$(_sshi_defaults)"
 eval "$(_sshi_scancnf ${SSHI_UC} ${SSHI_MC} ${@})"
 
 #-- Log file name format.
 local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
+
 #-- Determine if we should log.
 [ -n "${SSHI_IS_SSH}" ] && [ -n "${SSHI_NO_LOG_REMOTE}" ] && {
  S_NL=1
  unset S_LF
+
 } || {
+
  #- Log by default. Turn off logging when requested.
  [ -n "${SSHI_LOG_BY_DEF}" ] && {
   [ -n "${S_NL}" ] && unset S_LG S_NL || S_LG=1
+
  } || {
+
  #- Do not log by default. Turn on logging when requested.
   [ -n "${S_LG}" ] && local S_LG=1
  }
+
  #- Make sure log location is writable.
  [ -n "${S_LG}" ] && {
   local S_LF="${SSHI_LOG_LOC}/${S_LFM}"
- #- Create SSH log directory if needed.
+
+  #- Create SSH log directory if needed.
   [ -n "${SSHI_LOG_LOC}" ] && {
    [ -n ${SSHI_CREATE_LOG_LOC} ] && {
     [ ! -e ${SSHI_LOG_LOC} ] && {
@@ -280,12 +322,14 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
     }
    }
   }
+
   #- Make sure log directory is writeable. Try twice, after pausing for a bit.
   # The length is randomized to compensate for > 2 simultaneous SSH sessions
   # vying for the file.
   local WT=${SSHI_LOG_LOC}/.SSHI_WRITE_OK
   local S_E=0
   local OK=
+
   while [ -z "${OK}" ]; do
    eval "$(_sshi_retry_task 2 rm ${WT})"
    S_E=$((${S_E}+${R_T}))
@@ -297,6 +341,7 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
     sleep "0.1${RANDOM}"
    }
   done
+
   [ ${S_E} -gt 0 ] && {
    _sshi_err "Unable to write to directory '${SSHI_LOG_LOC}'.\nSession will not be logged."
    unset S_LF
@@ -307,38 +352,56 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
  }
 } 
 
+#- Had a problem with the embedded __sshi_l alias with older Perl versions.
+# Not going to figure it out for now.
+# We fall back to "tee -i", if the version is lower than 5.18.
+PC="perl -e 'use v5.18;' 2>/dev/null;[ \${?} -gt 0 ]&&{ echo;
+ OPERL=1;echo '**** WARNING: Perl version is earlier than 5.18.     ****';
+ echo '**** Using tee -i for logging (NO OUTPUT FILTERING). ****';echo;}"
+eval "${PC}"
+
+#- A log file needs to be defined to log. Also, no logging when a remote
+# SSH command was entered via CLI.
+[ -n "${S_LF}" ] && [ -z "${SSHREMCMD}" ] && {
+ [ -z "${OPERL}" ] && {
+  LC="__sshi_l ${S_LF}"
+ } || {
+  LC="tee -i ${S_LF}"
+ }
+}
+
 #- Skip prompt and rc file shipping if requested.
 [ -n "${NOPROMPT}" ] && unset S_F
+
 #- Parse things and connect if we have a matched entry in the SSH config.
 [ -n "${S_F}" ] && {
- local SSHREMCMD= #- Holds contents of commands to run on remote host.
+
  #- PROMPTONLY set on a host .ssh/config. Set things accordingly.
  [ -n "${PROMPTONLY}" ] && {
   [ -n "${SSHI_RPS1}" ] && {
    echo "Connecting to ${S_F} with local prompt."
-   SSHREMCMD="export PS1=\"${SSHI_RPS1}\";exec bash"
+   [ -z "${SSHREMCMD}" ] &&
+    SSHREMCMD="export PS1=\"${SSHI_RPS1}\";exec bash"
   }
  } || {
+
   #- The rcfile to use remotely. Regenerates every time you log in.
   # local .bashrc will be called at the end. Overrides can be defined on the remote.
   # This variable is exported for use on remote systems.
   [ -z "${RCPUSH}" ] && RCPUSH=".bashrc_pushed-${USER}"
+
   #- Add an alias to bash (use your customized bash env).
   local USH="alias bash='/bin/bash --rcfile ~/${RCPUSH}'"
+
   #- Code to determine user's local RC ( ${LRC} )
   local LRC='for F in .bashrc .bash_profile .profile;do [ -e ~/${F} ]&&{ echo ${F};break;};done'
   local RBASHRC='. $('"${LRC}"');'
+
   [ -n "${SSHI_RPS1}" ] && RBASHRC+="export PS1=\"${SSHI_RPS1}\""
-  local RBASHRC_E
+
+  local RBASHRC_E=
   echo -e "Connecting to ${S_F} with local shell includes.\n"
 
-  #- Had a problem with the embedded __sshi_l alias with older Perl versions.
-  # Not going to figure it out for now.
-  # We fall back to "tee -i", if the version is lower than 5.18.
-  PC="perl -e 'use v5.18;' 2>/dev/null;[ \${?} -gt 0 ]&&{ echo;
-   OPERL=1;echo '**** WARNING: Perl version is earlier than 5.18.     ****';
-   echo '**** Using tee -i for logging (NO OUTPUT FILTERING). ****';echo;}"
-  eval "${PC}"
   #- Gather aliases.
   local S_A=
   local OI=${IFS}
@@ -353,6 +416,7 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
    S_A="${S_A}${A};"
   done
   IFS=${OI}
+
   #- Use RCPUSH file if in an SSH session. Allows you to reuse your shipped stuff when
   # using ssh on remote systems.
   # ** This only really matters when ssh is included in SSHI_ADD_SUBS.
@@ -364,6 +428,7 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
   } || {
    RC=~/$(eval ${LRC})
   }
+
   #- Retrieve SSHI_ADD_SUBS functions and [SSH_INCLUDE] lines.
   # Functions need to be decoded before 'source'ing them (for some reason). Decoded output is
   # piped to RCPUSH.funcs file, which is sourced from the pushed rc file.
@@ -372,44 +437,45 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
   RBASHRC_E="export SSHI_IS_SSH=1;${S_A}${RFUNCS_E};${RBASHRC}"
   RBASHRC_E=${RBASHRC_E//\$/\\$}
   RBASHRC_E=${RBASHRC_E//\"/\\\"}
-  local SSHREMCMD="echo \"${RBASHRC_E}\">~/${RCPUSH};exec bash --rcfile ~/${RCPUSH}"
+  [ -z "${SSHREMCMD}" ] &&
+   SSHREMCMD="echo \"${RBASHRC_E}\">~/${RCPUSH};exec bash --rcfile ~/${RCPUSH}"
+
  }
 }
+
 #-- Compile the SSH command to run (including logging stuff) and run it.
-local LC=
-local SSHEXEC=("${SSHI_SSH_BIN}" ${@})
+local SSHEXEC=("${SSHI_SSH_BIN}" ${SSH_OPTS})
 [ -n "${SSHREMCMD}" ] && SSHEXEC=(${SSHEXEC[@]} "-t" "${SSHREMCMD}")
-[ -n "${S_LF}" ] && {
- [ -z "${OPERL}" ] && {
-  LC="__sshi_l ${S_LF}"
- } || {
-  LC="tee -i ${S_LF}"
- }
-}
+
 [ -n "${LC}" ] && {
  ${SSHEXEC[*]} | eval ${LC}
 } || {
  ${SSHEXEC[*]}
 }
+
 #-- Logging report.
-echo "------------------------------"
+[ -n "${LC}" ] && echo "------------------------------" 1>&2
 [ -n "${S_LG}" ] && {
  [ -n "${S_LF}" ] && {
+
   #- Report the log file name, if it is not zero-length. Otherwise remove the file.
   #- Report the session log path, but not if zero-length.
   [ -s "${S_LF}" ] && {
-   echo "Session logged to ${S_LF}"
+   echo "Session logged to ${S_LF}" 1>&2
   } || {
+
    #- Warn the user of zero-length log, and clear the file.
-   echo "No output logged from session. Removing ${S_LF}"
+   [ -n "${LC}" ] && echo "No output logged from session. Removing ${S_LF}" 1>&2
    rm "${S_LF}"
   }
+
  #- Warn the user that we were unable to write the session log.
  } || {
-  echo "WARNING: Logging is enabled, but unable to write to log. Verify SSHI_LOG_LOC is correct."
+  echo -ne "WARNING: Logging is enabled, but unable to write to log." 1>&2
+  echo -e " Please verify that SSHI_LOG_LOC is correct." 1>&2
  }
 }
 
-} # END ssh
+}
 
 # vim: filetype=sh tabstop=1 expandtab
