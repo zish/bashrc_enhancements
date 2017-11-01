@@ -42,7 +42,6 @@
 # along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
 
-
 #-- The '__sshi_l' alias is similar to 'tee', but is an embedded perl script.
 #  This allows for log output filtering (TODO), and keeps external tool
 #  dependencies to a minimum.
@@ -85,10 +84,21 @@ if(open(\$l,\">\",\$ARGV[0])){\$l->autoflush(1);STDOUT->autoflush(1);
 else{die(\"Problem writing to \\\"\".\$ARGV[0].\"\\\":\".\$!.\"\\n\");}
 sub out{if((length(\$b[1])>=\$mb)||(\$c eq \"\\r\"||\$c eq \"\\n\")){print \$l \$b[1];\$b[1]=undef;}}' --"
 
-
 #-- Modification of anything within this section requires you
 # to reread your rc or restart bash.
 ssh () {
+
+#-- Debugging output subroutine. Only logs output when SSHI_DBG > MSG_LVL.
+_sshi_debug () {
+ local MSG_LVL="${1}"
+ local MSG="${2}"
+ #- Skip debugging output when the destination file is undefined.
+ [ -n "${SSHI_DBG_DST}" ] && return
+ #- Skip debugging output when the message debug level is less than SSHI_DBG.
+ [ ${SSHI_DBG} -lt ${MSG_LVL} ] && return
+
+ echo -e "${MSG}" >> "${SSHI_DBG_DST}"
+}
 
 #-- Subroutine to set the configuration defaults, if no global overrides
 # have been set.
@@ -104,6 +114,8 @@ _sshi_defaults () {
   }
  done<<EOF
  SSHI_ADD_SUBS="sudo ssh tar addpath"
+ SSHI_DBG=4
+ SSHI_DBG_DST=
  SSHI_INC_FILES=()
  SSHI_INC_FILES_ARCHIVE_LOC=
  SSHI_RPS1='\[\e[1;1m\](\[\e[1;31m\]SSH\[\e[0;1m\])\[\e[0;37m\]${PS1}'
@@ -140,21 +152,22 @@ _sshi_scancnf () {
   [ ${C} -ge ${#CF[@]} ] && OP=(${OP[@]} ${O})
   C=$((${C}+1))
  done
-#-- SSH Command line option knowledge.
-# These are the known options for my installed OpenSSH version (v.7.2p2).
-#  (1)-  : Opts with NO argument. ( $sw )
-#  (2)-  : Opts WITH AN argument. ( $op )
-#  (3)-  : Decouple user@ prefix.
-#  (4)-  : Only host lines
-#  (5)-  : Escape wildcard types
-#  (6)-  : The first unrecognized option entered will be considered the "host".
-#  (7)-  : sh == SSH Host (and user, if defined).
-#  (8)-  : sc == SSH Remote Command
-#  (9)-  : If the SSH Host has been defined, we assume the first unregonized
-#          opt is a remote command to exec.
-#  (10)- : If the SSH Remote Command is nonzero, we assume that anything else
-#          is an option for the remote command.
-#  (11)- : so == SSH Opts
+
+ #- SSH Command line option knowledge.
+ # These are the known options for my installed OpenSSH version (v.7.2p2).
+ #  (1)-  : Opts with NO argument. ( $sw )
+ #  (2)-  : Opts WITH AN argument. ( $op )
+ #  (3)-  : Decouple user@ prefix.
+ #  (4)-  : Only host lines
+ #  (5)-  : Escape wildcard types
+ #  (6)-  : The first unrecognized option entered will be considered the "host".
+ #  (7)-  : sh == SSH Host (and user, if defined).
+ #  (8)-  : sc == SSH Remote Command
+ #  (9)-  : If the SSH Host has been defined, we assume the first unregonized
+ #          opt is a remote command to exec.
+ #  (10)- : If the SSH Remote Command is nonzero, we assume that anything else
+ #          is an option for the remote command.
+ #  (11)- : so == SSH Opts
  cat ${CF[@]} | perl -e '
  sub o{
   $r="^\\s*$_[1]";print "local ".$_[0]."\n"if((!$_[1])||(grep(/$r/,@{$_[2]})));
@@ -218,10 +231,10 @@ _sshi_clean_log_dir () {
   [ ${D} -ge ${SSHI_LOG_CMP_AGE} ] && {
    [ ${S} -lt ${SSHI_LOG_MIN_SIZE} ] && {
     echo "Removing ${L} (Size is ${S} bytes. Minimum size is ${SSHI_LOG_MIN_SIZE})."
-    rm ${L}
+    eval "$(_sshi_retry_task 2 2 rm -f ${L})"
    } || {
     echo "Compressing ${L}"
-    ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${L}
+    eval "$(_sshi_retry_task ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${L})"
    }
   }
  done
@@ -256,24 +269,53 @@ _sshi_package_include_files () {
 }
 
 #-- Retry execution of a task for a maximum number of tries, pausing
-# every 0.1$RANDOM seconds.
+# every 0.1[random] seconds.
+#
+# This is called using an eval. It outputs the results as R_O and R_T.
 _sshi_retry_task () {
   local OP=(${@})
   #- MR == Max. Retries before giving up.
-  local MR=${OP[0]}
-  OP[0]=
+  # Default is 2.
+  local MR=2
+  [[ "${OP[0]}" =~ ^[0-9\.]+$ ]] && {
+   MR=${OP[0]}
+   OP=("${OP[@]:1}")
+  }
+  #- TO == Wait this long for command to complete before failing the task.
+  # Default is 0 (infinite).
+  local TO=0
+  [[ "${OP[0]}" =~ ^[0-9\.]+$ ]] && {
+   TO=${OP[0]}
+   OP=("${OP[@]:1}")
+  }
   local OUT=
   local LP=1
   local CT=0
   while [ ${LP} -ge 1 ]; do
    CT=$((${CT}+1))
-   eval "O=\"$(${OP[@]} 2>&1;echo "\";LP=${?}")"
-   OUT="${O}"
+   [ ${TO} -eq 0 ] && {
+    eval "OUT=\"$(${OP[@]}; LP=${?}; echo "\"; LP=${LP}")"
+   } || {
+    eval "OUT=\"$(START=${SECONDS};ERR=0;DONE=0;${OP[@]} 2>&1 || ERR=${?} & \
+     CHILDPID=${!};echo -e "\";LP=\"${ERR}"; \
+     while [ ${DONE} -lt 1 ]; do P=$(ps -ef|grep ${CHILDPID}|grep -v grep); \
+     [ -z "${P}" ] && { DONE=1; } || { \
+      [ $((${SECONDS} - ${START})) -ge ${TO} ] && { DONE=1; } || { \
+#       echo "------------------------------------------" >> psout; \
+#       echo "child pid: ${CHILDPID}" >> psout; \
+#       echo "cmd: \"${OP[@]}\"" >> psout; \
+#       ps -ef >> psout; \
+       sleep 0.2;DONE=0; \
+      };};done)\""
+#    echo -e "OUT \"${OUT}\"" 1>&2
+   }
+
    [ ${LP} -ge 1 ] && {
     [ ${CT} -ge ${MR} ] && break
     sleep "0.1${RANDOM}"
    }
   done
+
   echo -e "R_O=\"${OUT}\";R_T=${LP}"
 }
 
@@ -317,8 +359,7 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
   [ -n "${SSHI_LOG_LOC}" ] && {
    [ -n ${SSHI_CREATE_LOG_LOC} ] && {
     [ ! -e ${SSHI_LOG_LOC} ] && {
-     mkdir -p ${SSHI_LOG_LOC} || \
-      _sshi_err "Unable to create dir:\n   ${SSHI_LOG_LOC}."
+     eval "$(_sshi_retry_task 1 1 mkdir -p ${SSHI_LOG_LOC})"
     }
    }
   }
@@ -331,9 +372,9 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
   local OK=
 
   while [ -z "${OK}" ]; do
-   eval "$(_sshi_retry_task 2 rm ${WT})"
+   eval "$(_sshi_retry_task 2 2 rm -f ${WT})"
    S_E=$((${S_E}+${R_T}))
-   eval "$(_sshi_retry_task 2 touch ${WT})"
+   eval "$(_sshi_retry_task 2 2 touch ${WT})"
    S_E=$((${S_E}+${R_T}))
    [ ${S_E} = 0 ] && {
     OK=1
@@ -430,8 +471,9 @@ eval "${PC}"
   }
 
   #- Retrieve SSHI_ADD_SUBS functions and [SSH_INCLUDE] lines.
-  # Functions need to be decoded before 'source'ing them (for some reason). Decoded output is
-  # piped to RCPUSH.funcs file, which is sourced from the pushed rc file.
+  # Functions need to be decoded before 'source'ing them (for some reason).
+  # Decoded output is piped to RCPUSH.funcs file, which is sourced from the
+  # pushed rc file.
   local RFUNCS="export RCPUSH=${RCPUSH};$(_sshi_getrc ${RC} ${SSHI_ADD_SUBS})"
   local RFUNCS_E="sleep 0.2;echo \"$(echo "${RFUNCS}"|eval ${S_BE})\"|${S_BD}>~/${RCPUSH}.funcs;. ~/${RCPUSH}.funcs"
   RBASHRC_E="export SSHI_IS_SSH=1;${S_A}${RFUNCS_E};${RBASHRC}"
@@ -439,7 +481,6 @@ eval "${PC}"
   RBASHRC_E=${RBASHRC_E//\"/\\\"}
   [ -z "${SSHREMCMD}" ] &&
    SSHREMCMD="echo \"${RBASHRC_E}\">~/${RCPUSH};exec bash --rcfile ~/${RCPUSH}"
-
  }
 }
 
