@@ -76,10 +76,10 @@ _rename_orig_command_not_found_handle () {
    || echo -e "export _COMMAND_TYPOS_INIT=1;\n${NEW}{ echo -ne \"\"; }"
 
    echo -e 'command_not_found_handle () {
-      EXITLVL=
-      INPUT_CMD=(${@})
-      CHECK=
-      RUN_CMD=()
+      local EXITLVL=
+      local INPUT_CMD=(${@})
+      local CHECK=
+      local RUN_CMD=()
       for C in "${INPUT_CMD[@]}"; do
          [ -n "${RUN_CMD[0]}" ] && {
             RUN_CMD=(${RUN_CMD} ${C})

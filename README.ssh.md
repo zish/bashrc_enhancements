@@ -18,17 +18,8 @@ This was written originally as a mechanism to bring my locally\-defined PS1 prom
 _Default:_
 * SSHI\_ADD\_SUBS="sudo ssh tar addpath"
 
-### SSHI\_INC\_FILES \- Associative array containing files to include with the shipped SSH Session\.
-_Default:_
-SSHI\_INC\_FILES=\(\)
-
-How to declare files:
-
-SSHI\_INC\_FILES=\("$\{HOME\}/\.vimrc" '$\{HOME\}/\.vimrc'\)
-*Note the use of single versus double\-quotes\. Using single will avoid expanding the value of the local variable\.*
-
 ### SSHI\_RPS1 \- Remote PS1 Prompt\.
-The default prepends the local PS1 with a red, bold SSH between parentheses\., which identifies at a glance that the terminal window is an SSH session\.
+The default prepends the local PS1 with a red, bold SSH between parentheses\. This identifies, at a glance, that the terminal window is an SSH session\.
 _Default:_
 * SSHI\_RPS1='\\\[\\033\[1;1m\\\]\(\\\[\\033\[1;31m\\\]SSH\\\[\\033\[0;1m\\\]\)\\\[\\033\[0;37m\\\]$\{PS1\}'
 To remotely use your local PS1 unmodified, use the following:
@@ -42,7 +33,7 @@ _Default:_
 _Default:_
 * UNDEFINED
 
-_Omitting SSHI_MC \(main cnf\) avoids the need to override "host \*" in the user config, so you will probably not need to use it\._
+_Omitting SSHI\_MC \(main cnf\) avoids the need to override "host \*" in the user config, so you will probably not need to use it\._
 
 ### SSHI\_LOG\_BY\_DEF \- Enable local logging of SSH sessions by default\.
 _Default:_
@@ -62,7 +53,7 @@ _Log file names in this directory will be formatted as 'HOST\-YYYY\-MM\-DD_HH\-M
 _Default:_
 SSHI\_CREATE\_LOG\_LOC=1
 
-If SSHI\_CREATE\_LOG\_LOC is nonzero, the log destination directory (SSHI\_LOG\_LOC) will be created if it does not exist\.
+If SSHI\_CREATE\_LOG\_LOC is nonzero, the log destination directory \(SSHI\_LOG\_LOC) will be created if it does not exist\.
 
 ### SSHI\_NO\_LOG\_REMOTE \- Don't try to generate logs, when using ssh function in a remote SSH session\.
 _Default:_
@@ -82,26 +73,19 @@ SSHI\_LOG\_CMP\_BIN=gzip
 
 *The compresion tool specified by SSHI\_LOG\_CMP\_BIN must support reading from STDIN, and writing to STDOUT\.*
 
-SSHI\_LOG\_CMP\_OPTS \- Command-line options for compression tool (specified by SSHI\_LOG\_CMP\_BIN)\.
+SSHI\_LOG\_CMP\_OPTS \- Command\-line options for compression tool \(specified by SSHI\_LOG\_CMP\_BIN)\.
 _Default:_
 SSHI\_LOG\_CMP\_OPTS=-9
 
-SSHI\_LOG\_CMP\_AGE \- Set the minimum SSH log age (in days) for compression eligibility\.
+SSHI\_LOG\_CMP\_AGE \- Set the minimum SSH log age \(in days) for compression eligibility\.
 _Default:_
 SSHI\_LOG\_CMP\_AGE=3
 
-SSHI\_LOG\_MIN\_SIZE \- Minimum size (in bytes) an SSH log must be to avoid being deleted\.
+SSHI\_LOG\_MIN\_SIZE \- Minimum size \(in bytes) an SSH log must be to avoid being deleted\.
 _Default:_
 SSHI\_LOG\_MIN\_SIZE=512
 
-SSHI\_LOG\_FILT \- Optional filters to apply to log file output\.
-_Default:_
-*NOT SET*
-
-This can be used for "fixing" log output, such as masking passwords or omitting other items from the log\.
-*It does not affect the terminal output\.*
-
-When performing SSH log directory maintenance, delete old logs (see SSHI\_LOG\_CMP\_AGE) that a smaller than SSHI\_LOG\_MIN\_SIZE\.
+When performing SSH log directory maintenance, delete old logs \(see SSHI\_LOG\_CMP\_AGE) that are smaller than SSHI\_LOG\_MIN\_SIZE\.
 
 ### SSHI\_SSH\_BIN \- Location of SSH command\.
 _Default:_
@@ -110,41 +94,24 @@ SSHI\_SSH\_BIN=/usr/bin/ssh
 If the SSH command is in a different location, it can be defined using this option\.
 
 
-## Using \[SSH\_INCLUDE\] in your local bashrc\.
+## Using \[SSHI\_INCLUDE\] in your local bashrc\.
 *This gives you the ability to include parts of your bashrc that otherwise wouldn't be easily transferrable\.*
 If, for example, an external tool or function required commented lines or encoded data from your local bashrc, these could be made available to the user on the remote system\.
 This can also be used to include local environment variables on the remote system, but their definitions must be in the local \.bashrc\.
 
-To include lines from your bashrc, add "\# \[SSH\_INCLUDE\] XX" \(where XX is the number of lines\) to the line above the section you want\.
-
-
-# (TODO):
-## SSHI\_LOG\_FILT examples\.
-SSHI\_LOG\_FILT=(
-'^(enable\ password\ )(\S+)//\1\*\*\*\*\*\*\*\*'
-'^(enable\ secret\ )(\S+)//\1\*\*\*\*\*\*\*\*'
-'^passwd\ )(\S+)$//\1\*\*\*\*\*\*\*\*'
-'^(username\ \S+ password\ )(\S+)//\1\*\*\*\*\*\*\*\*'
-'^(username\ \S+ privilege\ \d+\ (secret|password)\ \d+\ )(\S+)//\1\*\*\*\*\*\*\*\*'
-
-'^( ikev1 pre-shared-key )(\S+)//\1\*\*\*\*\*\*\*\*'
-'^( ikev2 remote-authentication pre-shared-key )(\S+)//\1\*\*\*\*\*\*\*\*'
-'^( ikev2 local-authentication pre-shared-key )(\S+)//\1\*\*\*\*\*\*\*\*'
-'^( ospf message-digest-key \d+ \S+ )(\S+)//\1\*\*\*\*\*\*\*\*'
-'^( key \d+ )(\S+)//\1\*\*\*\*\*\*\*\*'
-)
+To include lines from your bashrc, add "\# \[SSHI\_INCLUDE\] XX" \(where XX is the number of lines\) to the line above the section you want\.
 
 ### Examples:
 
 Export the local EDITOR env variable on the remote system\.
 ```
-# [SSH_INCLUDE] 1
+# [SSHI_INCLUDE] 1
 export EDITOR='vim'
 ```
 
 Use 'addpath' function on remote session to manage PATH\.
 ```
-# [SSH_INCLUDE] 6
+# [SSHI_INCLUDE] 6
 #-- Android Dev Stuff...
 addpath ${HOME}/bin/android-studio/bin first
 addpath ${HOME}/bin/android-studio/sdk/tools first
@@ -153,7 +120,7 @@ addpath ${HOME}/bin/android-studio/sdk/build-tools/android-4.4.2 first
 export ANDROID_HOME=${HOME}/bin/android-studio/sdk
 ```
 
-*Lines marked by "\[SSH\_INCLUDE\] XX" are made available in the "\.bashrc\_pushed\-\[user\]\.funcs" file on the remote system\.*
+*Lines marked by "\[SSHI\_INCLUDE\] XX" are made available in the "\.bashrc\_pushed\-\[user\]\.funcs" file on the remote system\.*
 
 
 ## Overriding settings for hosts in the SSH config file\.
@@ -188,32 +155,33 @@ _This illustrates multiple options can be used per host entry\._
 
 ### Roadmap:
 * Get remote file shipping to work.
- 1. Just copy the files for now. Do not copy if the files are pre-existing\.
+ 1a. Just copy the files for now\. Do not copy if the files are pre\-existing\.
+ 1b. Eventually checksum both files, and copy if the contents differ\.
 
 * Additional functionality in file shipping:
  2. Generate checksums of each file to be included\.
   * Store these checksums on the remote host\. use them to compare local and remote copies\.
   * Only copy each file, if it either does not exist, or the checksums don't match\.
  3. New option "SSHI\_INC\_FILES\_ARCHIVE\_LOC"
-  * Used when including local files to the remote host\. This specifies a location to archive pre-existing remote files, before they are replaced by the local version\. This functionality is disabled if SSHI\_INC\_FILES\_ARCHIVE\_LOC is not set, or the matching host entry in the SSH config includes the "NO\_ARCHIVE\_REMOTE\_FILES" option\.
- 4. Add per-host override for SSHI\_INC\_FILES, allowing the ability to specify different files per-host.
+  * Used when including local files to the remote host\. This specifies a location to archive pre\-existing remote files, before they are replaced by the local version\. This functionality is disabled if SSHI\_INC\_FILES\_ARCHIVE\_LOC is not set, or the matching host entry in the SSH config includes the "NO\_ARCHIVE\_REMOTE\_FILES" option\.
+ 4. Add per\-host override for SSHI\_INC\_FILES, allowing the ability to specify different files per\-host\.
 
 ### Additional techinical details:
 
 ## Variable names and their function:
-R\_O - Returned output from last command iteration executed by \_sshi\_retry\_task\.
-RCPUSH - Defines the name of the pushed \.bashrc file (\.bashrc\_pushed-[username])\.
-S\_A - Holder for aliases to be packaged and included in remote SSH session\.
-S\_BD - Holds Perl BASE64 decoder script.
-S\_BE - Holds Perl BASE64 encoder script.
-S\_E - Used as boolean. Set as true when trying to determine if the session log can be written to\.
-S\_F - Set by _sshi_scancnf function when an SSH Host entry was matched in the SSH config(s)\.
-S\_LFM - Defines the name format of the session's log file\.
-S\_LF - Defines the full path of the session log file\.
-S\_LG - Used as boolean. Set by _sshi_scancnf, when the SSH config host entry has the "LOG" option defined\.
-S\_NL - Used as boolean. Set by _sshi_scancnf, when the SSH config host entry has the "NOLOG" option defined\.
-SSHREMCMD - Holder for the commands to run on the remote SSH session, in order to set up the environment\.
-SSHEXEC - Full SSH command to execute, including contents of S\_SC\.
-SSHI\_IS\_SSH - Used as boolean. This is an environment variable set in SSH session, to help determine if we are actively in an SSH session\.
+R\_O \- Returned output from last command iteration executed by \_sshi\_retry\_task\.
+RCPUSH \- Defines the name of the pushed \.bashrc file \(\.bashrc\_pushed\-\[username\]\)\.
+S\_A \- Holder for aliases to be packaged and included in remote SSH session\.
+S\_BD \- Holds Perl BASE64 decoder script\.
+S\_BE \- Holds Perl BASE64 encoder script\.
+S\_E \- Used as boolean. Set as true when trying to determine if the session log can be written to\.
+S\_F \- Set by \_sshi\_scancnf function when an SSH Host entry was matched in the SSH config\(s\)\.
+S\_LFM \- Defines the name format of the session's log file\.
+S\_LF \- Defines the full path of the session log file\.
+S\_LG \- Used as boolean. Set by \_sshi\_scancnf, when the SSH config host entry has the "LOG" option defined\.
+S\_NL \- Used as boolean. Set by \_sshi\_scancnf, when the SSH config host entry has the "NOLOG" option defined\.
+SSHREMCMD \- Holder for the commands to run on the remote SSH session, in order to set up the environment\.
+SSHEXEC \- Full SSH command to execute, including contents of S\_SC\.
+SSHI\_IS\_SSH \- Used as boolean\. This is an environment variable set in SSH session, to help determine if we are actively in an SSH session\.
 
 
