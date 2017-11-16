@@ -1,6 +1,6 @@
 # SSH Intercept function README
 
-This was written originally as a mechanism to bring my locally\-defined PS1 prompt and  bash aliases with me, so I didn't need to copy them everywhere\. It has since had a lot more functionality added to it\.
+This was written originally as a mechanism to bring my locally\-defined PS1 prompt and bash aliases with me, so I didn't need to copy them everywhere\. It has since had a lot more functionality added to it\.
 
 ### Features:
 * Define PS1 locally, and have it appear in remote SSH sessions\.
@@ -15,8 +15,16 @@ This was written originally as a mechanism to bring my locally\-defined PS1 prom
 *Defining these variables in your \.bashrc will override the default\.*
 
 ### SSHI\_ADD\_SUBS \- Specifies what locally\-defined functions to include in a remote SSH session\.
+The value should be a comma-separated list.
 _Default:_
-* SSHI\_ADD\_SUBS="sudo ssh tar addpath"
+* SSHI\_ADD\_SUBS="sudo, ssh, tar, addpath"
+
+### SSHI\_BASH\_RCFILES \- Specifies a list of "rc" files to read for [SSHI\INCLUDE] entries.
+The value should be a comma-separated list.
+_Default:_
+SSHI\_BASH\_RCFILES="${HOME}/.bashrc, ${HOME}/.bash\_profile, ${HOME}/.profile"
+
+_The files in the list are read in the order they are listed._
 
 ### SSHI\_RPS1 \- Remote PS1 Prompt\.
 The default prepends the local PS1 with a red, bold SSH between parentheses\. This identifies, at a glance, that the terminal window is an SSH session\.
@@ -43,7 +51,7 @@ Setting this to 0 or undefined will cause the function to skip local logging, un
 
 ### SSHI\_LOG\_LOC \- SSH local session log destination directory\.
 _Default:_
-SSHI\_LOG\_LOC=~/ssh\_logs
+* SSHI\_LOG\_LOC=~/ssh\_logs
 
 *The directory specified must exist for logging to occur\.*
 
@@ -51,48 +59,57 @@ _Log file names in this directory will be formatted as 'HOST\-YYYY\-MM\-DD_HH\-M
 
 ### SSHI\_CREATE\_LOG\_LOC \- Create the log destination dir, if it doesn't exist\.
 _Default:_
-SSHI\_CREATE\_LOG\_LOC=1
+* SSHI\_CREATE\_LOG\_LOC=1
 
 If SSHI\_CREATE\_LOG\_LOC is nonzero, the log destination directory \(SSHI\_LOG\_LOC) will be created if it does not exist\.
 
 ### SSHI\_NO\_LOG\_REMOTE \- Don't try to generate logs, when using ssh function in a remote SSH session\.
 _Default:_
-SSHI\_NO\_LOG\_REMOTE=1
+* SSHI\_NO\_LOG\_REMOTE=1
 
-No logging functions will be attempted, if SSHI\_NO\_LOG\_REMOTE is nonzero\.
+*No logging functions will be attempted, if SSHI\_NO\_LOG\_REMOTE is nonzero\.*
 
 SSHI\_LOG\_COMPRESS \- Compress SSH logs\.
 _Default:_
-SSHI\_LOG\_COMPRESS=1
+* SSHI\_LOG\_COMPRESS=1
 
-If SSHI\_LOG\_COMPRESS is nonzero, any SSH logs older than SSHI\_LOG\_CMP\_AGE will be compressed\.
+*If SSHI\_LOG\_COMPRESS is nonzero, any SSH logs older than SSHI\_LOG\_CMP\_AGE will be compressed\.*
 
 SSHI\_LOG\_CMP\_BIN \- SSH log compression tool to use\.
 _Default:_
-SSHI\_LOG\_CMP\_BIN=gzip
+* SSHI\_LOG\_CMP\_BIN=gzip
 
 *The compresion tool specified by SSHI\_LOG\_CMP\_BIN must support reading from STDIN, and writing to STDOUT\.*
 
 SSHI\_LOG\_CMP\_OPTS \- Command\-line options for compression tool \(specified by SSHI\_LOG\_CMP\_BIN)\.
 _Default:_
-SSHI\_LOG\_CMP\_OPTS=-9
+* SSHI\_LOG\_CMP\_OPTS=-9
 
 SSHI\_LOG\_CMP\_AGE \- Set the minimum SSH log age \(in days) for compression eligibility\.
 _Default:_
-SSHI\_LOG\_CMP\_AGE=3
+* SSHI\_LOG\_CMP\_AGE=3
 
 SSHI\_LOG\_MIN\_SIZE \- Minimum size \(in bytes) an SSH log must be to avoid being deleted\.
 _Default:_
-SSHI\_LOG\_MIN\_SIZE=512
+* SSHI\_LOG\_MIN\_SIZE=512
 
-When performing SSH log directory maintenance, delete old logs \(see SSHI\_LOG\_CMP\_AGE) that are smaller than SSHI\_LOG\_MIN\_SIZE\.
+*When performing SSH log directory maintenance, delete old logs \(see SSHI\_LOG\_CMP\_AGE) that are smaller than SSHI\_LOG\_MIN\_SIZE\.*
 
 ### SSHI\_SSH\_BIN \- Location of SSH command\.
 _Default:_
-SSHI\_SSH\_BIN=/usr/bin/ssh
+* SSHI\_SSH\_BIN=/usr/bin/ssh
 
-If the SSH command is in a different location, it can be defined using this option\.
+*If the SSH command is in a different location, it can be defined using this option\.*
 
+### SSHI\_DBG \- "Debug" level for performing debug tasks.
+_Default:_
+* SSHI\_DBG=4
+
+*A file must be specified in SSHI\_DBG\_DST to enable debugging output.*
+
+### SSHI\_DBG\_DST \- Destination file for debugging output.
+_Default:_
+* UNDEFINED
 
 ## Using \[SSHI\_INCLUDE\] in your local bashrc\.
 *This gives you the ability to include parts of your bashrc that otherwise wouldn't be easily transferrable\.*
