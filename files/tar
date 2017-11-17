@@ -78,10 +78,10 @@ tar () {
 
   [ -n "${STDINSTDOUT}" ] && {
     echo "Piping to/from STDIN/STDOUT. Cannot filter STDERR at this time."
-    echo -e "${CMD}"
+    eval "${CMD}"
 
   } || {
-    local STDERR=$( { echo -e "CCC ${CMD}"; } 2>&1 );
+    local STDERR=$( { eval "${CMD}"; } 2>&1 );
 
     for ERR in ${STDERR}; do
       [[ ! "${ERR}" =~ .*[Hh]eader\ [Kk]eyword\ [\"\']SCHILY.* ]] &&
