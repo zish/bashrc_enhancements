@@ -30,25 +30,66 @@
 #    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
 tar () {
-	local STDINSTDOUT=
-	for O in "${@}"; do
-		[ "${O}" = "-" ] && STDINSTDOUT=1
-	done
-   local TARBIN=$(which tar);
-	local OPTS=${@};
-	[ -n "${STDINSTDOUT}" ] && {
-			echo "Piping to/from STDIN/STDOUT. Cannot filter STDERR at this time."
-			${TARBIN} ${OPTS}
-	} || {
-		local STDERR=$( { ${TARBIN} ${OPTS}; } 2>&1 );
-	   local OIFS=${IFS}; IFS=$'\n'
-	   for ERR in ${STDERR}; do
-	      if [[ ! ${ERR} =~ .*[Hh]eader\ [Kk]eyword\ [\"\']SCHILY.* ]]; then
-				echo "${ERR}"
-			fi
-	   done
-   	IFS=${OIFS}
-	}
+
+
+  local STDINSTDOUT=
+  local TARBIN="$(which tar)"
+
+  local CMD="${TARBIN}"
+
+  local IFS=$'\n'
+
+  #-- Retrieve options from "tar --help".
+  # Long-style opts containing (COMMAND|DATE|DATE-OR-FILE|FILE|NAME|STRING|STYLE)
+  # will have the value double-quoted.
+  #
+  R='^\ +(-[a-zA-Z]+,\ +)?(--[a-z\-]+=)(COMMAND|DATE(-OR-FILE)?|FILE|NAME|ST(RING|YLE))'
+  declare -A QOPTS
+
+  for L in $(${TARBIN} --help); do
+    [[ "${L}" =~ ${R} ]] && QOPTS["${BASH_REMATCH[2]}"]=1 || true
+
+  done
+
+
+  for O in "${@}"; do
+    #- "Short" style opts.
+    [[ "${O}" =~ ^-[a-zA-Z] ]] && {
+      CMD+=" ${O}"
+
+    } || {
+      #- "Long" style opts. Some have values that need double-quoting.
+      [[ "${O}" =~ ^(--[a-z\-]+=?)(.*) ]] && {
+        local ONAME="${BASH_REMATCH[1]}"
+        local OVAL="${BASH_REMATCH[2]}"
+
+        [ -n "${QOPTS[${ONAME}]}" ] &&
+          CMD+=" ${ONAME}\"${OVAL}\"" || CMD+=" ${ONAME}"
+
+      } || {
+        CMD+=" \"${O}\""
+
+      }
+    }
+
+    [ "${O}" = "-" ] && STDINSTDOUT=1 || true
+  done
+
+
+  [ -n "${STDINSTDOUT}" ] && {
+    echo "Piping to/from STDIN/STDOUT. Cannot filter STDERR at this time."
+    eval "${CMD}"
+
+  } || {
+    local STDERR=$( { eval "${CMD}"; } 2>&1 );
+
+    for ERR in ${STDERR}; do
+      [[ ! "${ERR}" =~ .*[Hh]eader\ [Kk]eyword\ [\"\']SCHILY.* ]] &&
+        echo "${ERR}" || true
+    done
+
+  }
+
 } # END tar ()
 
 # vim: ft=sh
