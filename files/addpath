@@ -71,13 +71,11 @@ addpath () {
     #-- Read PATH into an associative array (automatically removes duplicates).
     declare -A CPATHS
     local OI="${IFS}"; local IFS="${AP_VAR_DELIM}"; local C=0
-    for P in ${PATH}; do
-      CPATHS[${P}]=${C}
-      C=$((${C} + 1))
-    done
+    eval "for P in \${${AP_VAR_NAME}}; do \
+          CPATHS[\${P}]=\${C}; C=\$((\${C} + 1)); done"
     local IFS="${OI}"
   } || {
-    #-- We get here, if BaSH version < 4.
+    #-- We get here if BaSH version < 4.
     __addpath_verb "Warning: Using an old BaSH version (${BASH_VERSINFO}). "
     __addpath_verb "Some features are disabled."
     if [ "${PPOS}" = "first" ]; then
@@ -90,7 +88,7 @@ addpath () {
       __addpath_verb "Added ${NEW} to end of ${AP_VAR_NAME}"
     fi
     export ${AP_VAR_NAME}
-    return
+    unset AP_VAR_NAME;  return
   }
 
   #-- Remove trailing '/', if it exists.
@@ -102,7 +100,7 @@ addpath () {
     if [ "${PPOS}" = "remove" ]; then
       __addpath_verb "Removal of ${NEW} requested. Continuing with task."
     else
-      return
+      unset AP_VAR_NAME;  return
     fi
   }
 
@@ -115,7 +113,7 @@ addpath () {
         __addpath_verb "Removal of ${NEW} requested. Continuing with task."
       else
         __addpath_verb "Not continuing."
-        return
+        unset AP_VAR_NAME;  return
       fi
     else
       PATHDIRS[${POS}]="${P}"
@@ -135,6 +133,7 @@ addpath () {
     __addpath_verb "Added ${NEW} to end of ${AP_VAR_NAME}"
   fi
   export ${AP_VAR_NAME}
+  unset AP_VAR_NAME
 }
 
 # vim: tabstop=2 expandtab filetype=sh
