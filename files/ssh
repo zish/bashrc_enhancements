@@ -233,23 +233,32 @@ _sshi_clean_log_dir () {
   echo "SSHI_LOG_COMPRESS set, but age undefined. Cannot compress old logs."
   return
  }
- local F=
+# local F=
  #- TODO: Replace find/grep with native Bash or embedded Perl.
- for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -printf "%Cs %s %p\n"|grep -e "\.log$"); do
-  [[ "${F}" =~ ^([0-9]+)\ ([0-9]+)\ (.*) ]] && {
-   local D="$(((${CT}-${BASH_REMATCH[1]})/86400))"
-   local S="${BASH_REMATCH[2]}"
-   local L="${BASH_REMATCH[3]}"
-  }
-  [ ${D} -ge ${SSHI_LOG_CMP_AGE} ] && {
-   [ ${S} -lt ${SSHI_LOG_MIN_SIZE} ] && {
-    echo "Removing ${L} (Size is ${S} bytes. Minimum size is ${SSHI_LOG_MIN_SIZE})."
-    eval "$(_sshi_retry_task 2 2 rm -f ${L})"
-   } || {
-    echo "Compressing ${L}"
-    eval "$(_sshi_retry_task ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${L})"
-   }
-  }
+ #for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -printf "%Cs %s %p\n"|grep -e "\.log$"); do
+#  [[ "${F}" =~ ^([0-9]+)\ ([0-9]+)\ (.*) ]] && {
+#   local D="$(((${CT}-${BASH_REMATCH[1]})/86400))"
+#   local S="${BASH_REMATCH[2]}"
+#   local L="${BASH_REMATCH[3]}"
+#  }
+#  [ ${D} -ge ${SSHI_LOG_CMP_AGE} ] && {
+#   [ ${S} -lt ${SSHI_LOG_MIN_SIZE} ] && {
+#    echo "Removing ${L} (Size is ${S} bytes. Minimum size is ${SSHI_LOG_MIN_SIZE})."
+#    eval "$(_sshi_retry_task 2 2 rm -f ${L})"
+#   } || {
+#    echo "Compressing ${L}"
+#    eval "$(_sshi_retry_task ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${L})"
+#   }
+#  }
+ local IFS=$'\n'
+ for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -mtime +1|grep -e "\.log$"); do
+  echo "Compressing ${F}"
+  eval "$(_sshi_retry_task ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${F})"
+ done
+
+ for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -size -${SSHI_LOG_MIN_SIZE}c |grep -e "\.log$"); do
+  echo "Removing ${F}. File is smaller than minimum allowed size (${SSHI_LOG_MIN_SIZE} bytes)."
+  eval "$(_sshi_retry_task 2 2 rm -f ${F})"
  done
 }
 
@@ -359,10 +368,10 @@ _sshi_retry_task () {
   echo -e "R_O=\"${OUT}\";R_T=${LP}"
 }
 
-#-- Use Perl for BASE64 encode/decode. This eliminates the need to
+#-- Use Python for BASE64 encode/decode. This eliminates the need to
 # keep track of different encode/decode tools and their cmd line opts.
-local S_BE="perl -MMIME::Base64 -e '\$f=join(\"\",<STDIN>);print encode_base64(\$f,\"\");'"
-local S_BD="perl -MMIME::Base64 -e '\$f=join(\"\",<STDIN>);print decode_base64(\$f);'"
+local S_BE="python -c 'import sys;import base64;sys.stdout.write(base64.b64encode(\"\".join(sys.stdin)))'"
+local S_BD="python -c 'import sys;import base64;sys.stdout.write(base64.b64decode(\"\".join(sys.stdin)))'"
 
 #-- This will be populated with our "log command".
 local LC=
@@ -433,6 +442,7 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
  }
 } 
 
+#--- TODO: Remove this after converting log alias to python.
 #- Had a problem with the embedded __sshi_l alias with older Perl versions.
 # Not going to figure it out for now.
 # We fall back to "tee -i", if the version is lower than 5.18.
@@ -441,6 +451,7 @@ PC="perl -e 'use v5.18;' 2>/dev/null;[ \${?} -gt 0 ]&&{ echo;
  echo '**** Using tee -i for logging (NO OUTPUT FILTERING). ****';echo;}"
 eval "${PC}"
 
+#--- TODO: Remove this after converting log alias to python.
 #- A log file needs to be defined to log. Also, no logging when a remote
 # SSH command was entered via CLI.
 [ -n "${S_LF}" ] && [ -z "${SSHREMCMD}" ] && {
@@ -482,6 +493,7 @@ eval "${PC}"
   local OI=${IFS}
   IFS=$'\n'
   for A in $(alias); do
+   #--- TODO: Remove this after converting log alias to python.
    #- Replace the __sshi_l alias, if an old Perl version was found locally.
    [[ "${A}" =~ ^alias\ __sshi_l ]] && {
     [ -n "${OPERL}" ] && {
