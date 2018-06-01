@@ -32,7 +32,7 @@ update_title_bar () {
   #--- Initialize the PROMPT_COMMAND and trap, if the first arg is "init".
   [[ "${1}" == "init" ]] && {
     [[ "${PROMPT_COMMAND}" != "" ]] && PROMPT_COMMAND+=";"
-    PROMPT_COMMAND+='update_title_bar 0 ${SHELL}'
+    export PROMPT_COMMAND+='update_title_bar 0 ${SHELL};${PROMPT_COMMAND}'
     trap 'update_title_bar ${0}' DEBUG
   #--- Set some text replacment defaults.
     [[ -z "${UTB_TEXT_REPLACE[*]}" ]] && {
