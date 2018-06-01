@@ -51,89 +51,150 @@ addpath () {
 
   local NEW=${1}
   local PPOS=;
-  [[ ${2} ]] && PPOS=${2}
+
+  if [[ ${2} ]]; then
+    PPOS=${2}
+  fi
+
   #-- Add a little verbosity if this is nonzero.
   # Useful for debugging things, if needed.
   local VERB=${3}
 
+
   #-- These are a couple helper functions to support addpath.
-  __addpath_verb () { [[ ${VERB} ]] && echo "-- ${1}"; }
-  __addpath_join () { local IFS="${AP_VAR_DELIM}"; echo "${*}"; }
-  __addpath_clean () { local IFS="${AP_VAR_DELIM}"; echo "${*}"; }
+  __addpath_verb () {
+    if [[ ${VERB} ]]; then
+      echo "-- ${1}"
+    fi
+  }
+
+  __addpath_join () {
+    local IFS="${AP_VAR_DELIM}"
+    echo "BLERG ${*}"
+    echo "${*}"
+  }
+
+  __addpath_clean () {
+    local IFS="${AP_VAR_DELIM}"
+    echo "${*}"
+  }
+
 
   #-- Default variable to act against is 'PATH'.
-  [ -z "${AP_VAR_NAME}" ] && AP_VAR_NAME="PATH"
+  AP_VAR_NAME="${AP_VAR_NAME:-PATH}"
+#  if [[ "${AP_VAR_NAME}" == "" ]]; then
+#    AP_VAR_NAME="PATH"
+#  fi
+
   #-- Default delimiter is ':'.
-  [ -z "${AP_VAR_DELIM}" ] && AP_VAR_DELIM=":"
+  AP_VAR_DELIM="${AP_VAR_DELI:-:}"
+#  if [["${AP_VAR_DELIM}" == "" ]]; then
+#    AP_VAR_DELIM=":"
+#  fi
+
 
   #-- We can't use associative arrays (hashes) in BaSH versions < 4.x).
-  (( "${BASH_VERSINFO}" >= 4 )) && {
+  if (( "${BASH_VERSINFO}" >= 4 )); then
     #-- Read PATH into an associative array (automatically removes duplicates).
     declare -A CPATHS
+
     local OI="${IFS}"; local IFS="${AP_VAR_DELIM}"; local C=0
+
     eval "for P in \${${AP_VAR_NAME}}; do \
           CPATHS[\${P}]=\${C}; C=\$((\${C} + 1)); done"
+
     local IFS="${OI}"
-  } || {
+
+  else
     #-- We get here if BaSH version < 4.
     __addpath_verb "Warning: Using an old BaSH version (${BASH_VERSINFO}). "
     __addpath_verb "Some features are disabled."
+
     if [ "${PPOS}" = "first" ]; then
       eval "${AP_VAR_NAME}=\"${NEW}${AP_VAR_DELIM}$(eval "echo \${${AP_VAR_NAME}}")\""
+
       __addpath_verb "Added ${NEW} to beginning of ${AP_VAR_NAME}"
+
     elif [ "${PPOS}" = "remove" ]; then
+
       __addpath_verb "Running old BaSH version. Skipping removal of '${NEW}'."
+
     else
       eval "${AP_VAR_NAME}=\"$(eval "echo \${${AP_VAR_NAME}}")${AP_VAR_DELIM}${NEW}\""
+
       __addpath_verb "Added ${NEW} to end of ${AP_VAR_NAME}"
+
     fi
+
     export ${AP_VAR_NAME}
     unset AP_VAR_NAME;  return
-  }
+
+  fi
+
 
   #-- Remove trailing '/', if it exists.
-  [[ "${NEW}" =~ (.+)\/$ ]] && NEW="${BASH_REMATCH[1]}"
+  if [[ "${NEW}" =~ (.+)\/$ ]];then
+    NEW="${BASH_REMATCH[1]}"
+  fi
+
   #-- Make sure the directory exists, and that it wasn't
   # already added to PATH.
-  [ ! -d ${NEW} ] && {
+  if [[ ! -d ${NEW} ]]; then
     __addpath_verb "${NEW} does not exist or is not a directory"
+
     if [ "${PPOS}" = "remove" ]; then
       __addpath_verb "Removal of ${NEW} requested. Continuing with task."
+
     else
       unset AP_VAR_NAME;  return
+
     fi
-  }
+  fi
+
 
   local PATHDIRS=()
   for P in "${!CPATHS[@]}"; do
     local POS="${CPATHS[${P}]}"
+
     if [ "${P}" = "${NEW}" ]; then
       __addpath_verb "${NEW} already in ${AP_VAR_NAME}."
+
       if [ "${PPOS}" = "remove" ]; then
         __addpath_verb "Removal of ${NEW} requested. Continuing with task."
+
       else
         __addpath_verb "Not continuing."
         unset AP_VAR_NAME;  return
+
       fi
     else
       PATHDIRS[${POS}]="${P}"
+
     fi
+
   done
+
 
   if [ "${PPOS}" = "first" ]; then
     PATHDIRS=(${NEW} ${PATHDIRS[@]})
-    eval "${AP_VAR_NAME}=\"$(__addpath_join ${PATHDIRS[@]})\""
+
     __addpath_verb "Added ${NEW} to beginning of ${AP_VAR_NAME}"
+    eval "${AP_VAR_NAME}=\"$(__addpath_join ${PATHDIRS[@]})\""
+
   elif [ "${PPOS}" = "remove" ]; then
     __addpath_verb "Removal of ${NEW} requested. Not re-adding to ${AP_VAR_NAME}."
     eval "${AP_VAR_NAME}=\"$(__addpath_join ${PATHDIRS[@]})\""
+
   else
     PATHDIRS=(${PATHDIRS[@]} ${NEW})
-    eval "${AP_VAR_NAME}=\"$(__addpath_join ${PATHDIRS[@]})\""
+
     __addpath_verb "Added ${NEW} to end of ${AP_VAR_NAME}"
+    eval "${AP_VAR_NAME}=\"$(__addpath_join ${PATHDIRS[@]})\""
+
   fi
+
   export ${AP_VAR_NAME}
   unset AP_VAR_NAME
 }
 
-# vim: tabstop=2 expandtab filetype=sh
+# vim: filetype=sh
