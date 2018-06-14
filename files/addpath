@@ -70,7 +70,6 @@ addpath () {
 
   __addpath_join () {
     local IFS="${AP_VAR_DELIM}"
-    echo "BLERG ${*}"
     echo "${*}"
   }
 
@@ -82,15 +81,9 @@ addpath () {
 
   #-- Default variable to act against is 'PATH'.
   AP_VAR_NAME="${AP_VAR_NAME:-PATH}"
-#  if [[ "${AP_VAR_NAME}" == "" ]]; then
-#    AP_VAR_NAME="PATH"
-#  fi
 
   #-- Default delimiter is ':'.
   AP_VAR_DELIM="${AP_VAR_DELI:-:}"
-#  if [["${AP_VAR_DELIM}" == "" ]]; then
-#    AP_VAR_DELIM=":"
-#  fi
 
 
   #-- We can't use associative arrays (hashes) in BaSH versions < 4.x).
@@ -110,7 +103,7 @@ addpath () {
     __addpath_verb "Warning: Using an old BaSH version (${BASH_VERSINFO}). "
     __addpath_verb "Some features are disabled."
 
-    if [ "${PPOS}" = "first" ]; then
+    if [[ "${PPOS}" == "first" ]]; then
       eval "${AP_VAR_NAME}=\"${NEW}${AP_VAR_DELIM}$(eval "echo \${${AP_VAR_NAME}}")\""
 
       __addpath_verb "Added ${NEW} to beginning of ${AP_VAR_NAME}"
@@ -156,10 +149,10 @@ addpath () {
   for P in "${!CPATHS[@]}"; do
     local POS="${CPATHS[${P}]}"
 
-    if [ "${P}" = "${NEW}" ]; then
+    if [[ "${P}" == "${NEW}" ]]; then
       __addpath_verb "${NEW} already in ${AP_VAR_NAME}."
 
-      if [ "${PPOS}" = "remove" ]; then
+      if [[ "${PPOS}" == "remove" ]]; then
         __addpath_verb "Removal of ${NEW} requested. Continuing with task."
 
       else
@@ -175,13 +168,13 @@ addpath () {
   done
 
 
-  if [ "${PPOS}" = "first" ]; then
+  if [[ "${PPOS}" == "first" ]]; then
     PATHDIRS=(${NEW} ${PATHDIRS[@]})
 
     __addpath_verb "Added ${NEW} to beginning of ${AP_VAR_NAME}"
     eval "${AP_VAR_NAME}=\"$(__addpath_join ${PATHDIRS[@]})\""
 
-  elif [ "${PPOS}" = "remove" ]; then
+  elif [[ "${PPOS}" == "remove" ]]; then
     __addpath_verb "Removal of ${NEW} requested. Not re-adding to ${AP_VAR_NAME}."
     eval "${AP_VAR_NAME}=\"$(__addpath_join ${PATHDIRS[@]})\""
 
