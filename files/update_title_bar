@@ -115,6 +115,10 @@ update_title_bar () {
 
 
 #--- Some stuff needs to be initialized, for things to work correctly.
-update_title_bar init
+# We can skip init, if it is desirable to init it manually.
+#
+if [[ "${UTB_MANUAL_INIT}" != 1 ]]; then
+	update_title_bar init
+fi
 
 # vim: ft=sh
