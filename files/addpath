@@ -12,21 +12,29 @@
 # To use this, source the file from your .bashrc (or .bash_profile).
 #
 #-- Syntax examples:
-# "addpath /usr/bin first"     - Adds "/usr/bin" to the beginning of PATH.
-# "addpath /usr/local/sbin"   - Adds "/usr/local/sbin" to the end of PATH.
-# "addpath /usr/local/sbin"   - Repeat of the previous to illustrate that
+# "addpath /usr/bin first" - Adds "/usr/bin" to the beginning of PATH.
+#
+# "addpath /usr/local/sbin" - Adds "/usr/local/sbin" to the end of PATH.
+#
+# "addpath /usr/local/sbin" - Repeat of the previous to illustrate that
 #                       duplicates do not get added.
-# "addpath ${HOME}/foo first"  - Adds "foo" from your home directory
+#
+# "addpath ${HOME}/foo first"   - Adds "foo" from your home directory
 #                       Ex. "/home/zish/foo") to the beginning
 #                       of PATH.
-# "addpath ${HOME}/bar remove"  - Removes any references to "${HOME}/bar"
+#
+# "addpath ${HOME}/bar remove" - Removes any references to "${HOME}/bar"
 #                       Ex. "/home/zish/foo") from PATH.
 #
 #-- Results:
 # - If the original value of PATH was "/bin:/usr/bin:/home/zish/bar"...
-# ... and "/home/zish/foo" exists, the end result would be
+#
+# ... and "/home/zish/foo" exists, the end result would be:
+#
 #     "/home/zish/foo:/bin:/usr/bin:/usr/local/sbin".
-# ... and "/home/zish/foo" does not exist, the end result would be
+#
+# ... and "/home/zish/foo" does not exist, the end result would be:
+#
 #     "/bin:/usr/bin:/usr/local/sbin".
 #
 #
@@ -44,6 +52,8 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
+
+
 
 addpath () {
   #-- Enable the use of embedded regular expressions (if not already set)
@@ -86,8 +96,8 @@ addpath () {
   AP_VAR_DELIM="${AP_VAR_DELI:-:}"
 
 
-  #-- We can't use associative arrays (hashes) in BaSH versions < 4.x).
-  if (( "${BASH_VERSINFO}" >= 4 )); then
+  #-- We can't use associative arrays (hashes) in Bash versions < 4.x).
+  if (( ${BASH_VERSINFO[0]} >= 4 )); then
     #-- Read PATH into an associative array (automatically removes duplicates).
     declare -A CPATHS
 
@@ -99,8 +109,8 @@ addpath () {
     local IFS="${OI}"
 
   else
-    #-- We get here if BaSH version < 4.
-    __addpath_verb "Warning: Using an old BaSH version (${BASH_VERSINFO}). "
+    #-- We get here if Bash version < 4.
+    __addpath_verb "Warning: Using an old Bash version (${BASH_VERSINFO}). "
     __addpath_verb "Some features are disabled."
 
     if [[ "${PPOS}" == "first" ]]; then
@@ -110,7 +120,7 @@ addpath () {
 
     elif [ "${PPOS}" = "remove" ]; then
 
-      __addpath_verb "Running old BaSH version. Skipping removal of '${NEW}'."
+      __addpath_verb "Running old Bash version. Skipping removal of '${NEW}'."
 
     else
       eval "${AP_VAR_NAME}=\"$(eval "echo \${${AP_VAR_NAME}}")${AP_VAR_DELIM}${NEW}\""
