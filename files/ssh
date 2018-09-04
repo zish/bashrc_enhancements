@@ -272,38 +272,25 @@ _sshi_clean_log_dir () {
 #          * GETS BOTH SSH_INCLUDE AND SSHI_INCLUDE.
 #            SSH_INCLUDE will be deprecated in the near future.
 _sshi_getrc () {
- set | /usr/bin/perl -e '
- @rc=split(/\s*,\s*/,shift(@ARGV));
+ set | /usr/bin/perl -e '@rc=split(/\s*,\s*/,shift(@ARGV));
  my %addSubs;my $subsIn;my @subsIn;
- if($subsIn=~/,/){ #-(1)-
-  @subsIn=split(/\s*\,\s*/,$ARGV[0]);
- }else{
-  @subsIn=split(/\s*/,$ARGV[0]);
- }
+ if($subsIn=~/,/){@subsIn=split(/\s*\,\s*/,$ARGV[0]);} #-(1)-
+ else{@subsIn=split(/\s*/,$ARGV[0]);}
  foreach my $f(split(/\s*,\s*/,shift(@ARGV))){
-  $f=~s/^\s*\"?//;$f=~s/\"?\s*$//;
-  $addSubs{$f}=1;
- }
- my $b;
- foreach my $l(<STDIN>){
+  $f=~s/^\s*\"?//;$f=~s/\"?\s*$//;$addSubs{$f}=1;}
+ my $b;foreach my$l(<STDIN>){
   if($l=~/^\s*(\S+)\s+\([^\(\)]*\)\s*$/){$b=$1;} #-(2)-
-  print $l if($addSubs{$b});
-  $b=undef if($l=~/^\}\s*([\;\#]?.*)/);
- }
- foreach my $rcf(@rc) {
+  print $l if($addSubs{$b});$b=undef if($l=~/^\}\s*([\;\#]?.*)/);}
+ foreach my $rcf(@rc){
   $rcf=~s/^\s*\"?//;$rcf=~s/\"?\s*$//;
-  if(!open(my $f,"<",$rcf)) {
-   print STDERR "Cannot open rc file $rcf: $!\n";
-   next;
-  }else{
-   my ($i,$c,$incPos);
+  if(!open(my$f,"<",$rcf)) {print STDERR "Cannot open rc file $rcf: $!\n";next;}
+  else{my($i,$c,$incPos);
    foreach my $l(<$f>){ #-(3)-
-    if($l=~/^\s*\#\s*\[SSHI?_INCLUDE\]\s+(\d+)/){$i=$1;}
-    if($i){
-     if($c<=$i){print$l;$c++;}else{$c=0;$i=0;}
-   }}
+    if($l=~/^(\s*)\#\s*\[SSHI?_INCLUDE\]\s+(\d+)/){
+     $i=$2;print $1."#- [SSHI] Included from file \"$rcf\":\n";}
+    if($i){if($c<=$i){print $l;$c++;}else{$c=0; $i=0;}}}
    close($f);
- }}' -- "${1}" "${2}"
+  }}' -- "${1}" "${2}"
 }
 
 #-- TODO: Package external files for inclusion.
@@ -538,26 +525,26 @@ local SSHEXEC=("${SSHI_SSH_BIN}" ${SSH_OPTS})
 }
 
 #-- Logging report.
-[ -n "${LC}" ] && echo "------------------------------" 1>&2
-[ -n "${S_LG}" ] && {
- [ -n "${S_LF}" ] && {
+if [ -n "${LC}" ]; then echo "------------------------------" 1>&2; fi
+if [ -n "${S_LG}" ]; then
+ if [ -n "${S_LF}" ]; then
 
   #- Report the log file name, if it is not zero-length. Otherwise remove the file.
-  [ -s "${S_LF}" ] && {
+  if [ -s "${S_LF}" ]; then
    echo "Session logged to ${S_LF}" 1>&2
-  } || {
+  else
 
    #- Warn the user of zero-length log, and clear the file.
    [ -n "${LC}" ] && echo "No output logged from session. Removing ${S_LF}" 1>&2
    rm "${S_LF}"
-  }
+  fi
 
  #- Warn the user that we were unable to write the session log.
- } || {
+ else
   echo -ne "WARNING: Logging is enabled, but unable to write to log." 1>&2
   echo -e " Please verify that SSHI_LOG_LOC is correct." 1>&2
- }
-}
+ fi
+fi
 
 }
 
