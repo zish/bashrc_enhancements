@@ -86,8 +86,8 @@ addpath () {
   AP_VAR_DELIM="${AP_VAR_DELI:-:}"
 
 
-  #-- We can't use associative arrays (hashes) in BaSH versions < 4.x).
-  if (( "${BASH_VERSINFO}" >= 4 )); then
+  #-- We can't use associative arrays (hashes) in Bash versions < 4.x).
+  if (( ${BASH_VERSINFO[0]} >= 4 )); then
     #-- Read PATH into an associative array (automatically removes duplicates).
     declare -A CPATHS
 
@@ -99,8 +99,8 @@ addpath () {
     local IFS="${OI}"
 
   else
-    #-- We get here if BaSH version < 4.
-    __addpath_verb "Warning: Using an old BaSH version (${BASH_VERSINFO}). "
+    #-- We get here if Bash version < 4.
+    __addpath_verb "Warning: Using an old Bash version (${BASH_VERSINFO}). "
     __addpath_verb "Some features are disabled."
 
     if [[ "${PPOS}" == "first" ]]; then
@@ -110,7 +110,7 @@ addpath () {
 
     elif [ "${PPOS}" = "remove" ]; then
 
-      __addpath_verb "Running old BaSH version. Skipping removal of '${NEW}'."
+      __addpath_verb "Running old Bash version. Skipping removal of '${NEW}'."
 
     else
       eval "${AP_VAR_NAME}=\"$(eval "echo \${${AP_VAR_NAME}}")${AP_VAR_DELIM}${NEW}\""

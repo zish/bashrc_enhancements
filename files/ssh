@@ -131,7 +131,6 @@ _sshi_defaults () {
  SSHI_DBG_DST=
  SSHI_INC_FILES=()
  SSHI_INC_FILES_ARCHIVE_LOC=
- SSHI_RPS1='\[\e[1;1m\](\[\e[1;31m\]SSH\[\e[0;1m\])\[\e[0;37m\]${PS1}'
  SSHI_UC=~/.ssh/config
 # SSHI_MC=/etc/ssh/ssh_config
  SSHI_LOG_BY_DEF=1
@@ -145,12 +144,13 @@ _sshi_defaults () {
  SSHI_LOG_CMP_OPTS=-9
  SSHI_SSH_BIN=/usr/bin/ssh
 EOF
+# SSHI_RPS1='\[\e[1;1m\](\[\e[1;31m\]SSH\[\e[0;1m\])\[\e[0;37m\]${PS1}'
 }
 
 #-- Format and output local error messages.
 _sshi_err () {
  local S="****************\n"
- echo -e "${S}\a\a\aWARNING: ${1}${S}"
+ echo -e "${S}\a\a\aWARNING: ${1}${S}" 1>&2
 }
 
 #-- Get SSH hostname and scan conf(s). Missing files are ignored.
@@ -230,7 +230,7 @@ _sshi_clean_log_dir () {
   return
  }
  [ -z "${SSHI_LOG_CMP_AGE}" ] && {
-  echo "SSHI_LOG_COMPRESS set, but age undefined. Cannot compress old logs."
+  echo "SSHI_LOG_COMPRESS set, but age undefined. Cannot compress old logs." 1>&2
   return
  }
 # local F=
@@ -243,21 +243,21 @@ _sshi_clean_log_dir () {
 #  }
 #  [ ${D} -ge ${SSHI_LOG_CMP_AGE} ] && {
 #   [ ${S} -lt ${SSHI_LOG_MIN_SIZE} ] && {
-#    echo "Removing ${L} (Size is ${S} bytes. Minimum size is ${SSHI_LOG_MIN_SIZE})."
+#    echo "Removing ${L} (Size is ${S} bytes. Minimum size is ${SSHI_LOG_MIN_SIZE})." 1>&2
 #    eval "$(_sshi_retry_task 2 2 rm -f ${L})"
 #   } || {
-#    echo "Compressing ${L}"
+#    echo "Compressing ${L}" 1>&2
 #    eval "$(_sshi_retry_task ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${L})"
 #   }
 #  }
  local IFS=$'\n'
  for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -mtime +1|grep -e "\.log$"); do
-  echo "Compressing ${F}"
+  echo "Compressing ${F}" 1>&2
   eval "$(_sshi_retry_task ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${F})"
  done
 
  for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -size -${SSHI_LOG_MIN_SIZE}c |grep -e "\.log$"); do
-  echo "Removing ${F}. File is smaller than minimum allowed size (${SSHI_LOG_MIN_SIZE} bytes)."
+  echo "Removing ${F}. File is smaller than minimum allowed size (${SSHI_LOG_MIN_SIZE} bytes)." 1>&2
   eval "$(_sshi_retry_task 2 2 rm -f ${F})"
  done
 }
@@ -446,9 +446,9 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
 #- Had a problem with the embedded __sshi_l alias with older Perl versions.
 # Not going to figure it out for now.
 # We fall back to "tee -i", if the version is lower than 5.18.
-PC="perl -e 'use v5.18;' 2>/dev/null;[ \${?} -gt 0 ]&&{ echo;
- OPERL=1;echo '**** WARNING: Perl version is earlier than 5.18.     ****';
- echo '**** Using tee -i for logging (NO OUTPUT FILTERING). ****';echo;}"
+PC="perl -e 'use v5.18;' 2>/dev/null;[ \${?} -gt 0 ]&&{ echo 1>&2;
+ OPERL=1;echo '**** WARNING: Perl version is earlier than 5.18.     ****' 1>&2;
+ echo '**** Using tee -i for logging (NO OUTPUT FILTERING). ****' 1>&2;echo 1>&2;}"
 eval "${PC}"
 
 #--- TODO: Remove this after converting log alias to python.
@@ -471,7 +471,7 @@ eval "${PC}"
  #- PROMPTONLY set on a host .ssh/config. Set things accordingly.
  [ -n "${PROMPTONLY}" ] && {
   [ -n "${SSHI_RPS1}" ] && {
-   echo "Connecting to ${S_F} with local prompt."
+   echo "Connecting to ${S_F} with local prompt." 1>&2
    [ -z "${SSHREMCMD}" ] &&
     SSHREMCMD="export PS1=\"${SSHI_RPS1}\";exec bash"
   }
@@ -486,7 +486,7 @@ eval "${PC}"
   local USH="alias bash='/bin/bash --rcfile ~/${RCPUSH}'"
 
   local RBASHRC_E=
-  echo -e "Connecting to ${S_F} with local shell includes.\n"
+  echo -e "Connecting to ${S_F} with local shell includes.\n" 1>&2
 
   #- Gather aliases.
   local S_A=
