@@ -1,0 +1,94 @@
+#--- Adds a 'quit' command, as smarter alternative to 'exit'.
+# The primary function is to avoid closing a session prematurely, by adding
+# a delay before the session closes.
+#
+# Author: Jeremy Melanson
+#
+# Changelog:
+# 2018-09-05 - JM : Initial pre-alpha, usable version created.
+#
+# Source-code, documentation and revision Git repository: https://github.com/zish/bashrc_enhancements
+#
+# Last-Modified: 2016-09-08
+#
+# $ git clone https://github.com/zish/bashrc_enhancements
+#
+# To use this, source the file from your .bashrc (or .bash_profile).
+#
+#-- Configuration Variables:
+# QUIT_DELAY - Wait the specified number of seconds before exiting.
+#
+#		Default is 3 seconds.
+#
+# QUIT_COUNTDOWN_INCR - Report countdown every specified number of seconds.
+# 
+#		Default is to report every 1 second.
+#
+#
+#-- Use Examples:
+#
+#- Exit level default (0):
+# "quit" - Pauses for QUIT_DELAY seconds, then exits with a status of 0.
+#
+#- Nonzero exit level:
+# "quit 1" - Pauses for QUIT_DELAY seconds, then exits with a status of 1.
+#
+#
+# This file is part of bashrc_enhancements.
+#
+# bashrc_enhancements is free software: you can redistribute it and/or
+# modify it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+#  bashrc_enhancements is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+#--- ** These entries must be integers:
+
+#--- Default delay for 5 seconds.
+QUIT_DELAY=${QUIT_DELAY:-3}
+
+#--- Default delay for reporting countdown increments is 1 second.
+QUIT_COUNTDOWN_INCR=${QUIT_REPORT:-1}
+
+
+
+quit () {
+	#--- Just exit if we're not running interactively.
+	case ${-} in *i*);; *) exit ${@};; esac
+
+	local LVL=${1:-0}
+	local REMAIN=${QUIT_DELAY}
+
+	(
+		while [ 1 ]; do
+			echo -e "Pausing before exit (${REMAIN}s remain). Press CONTROL-C to cancel."
+			sleep ${QUIT_COUNTDOWN_INCR}
+
+			#-- The weird thing with the period in QUIT_COUNTDOWN_INCR was added
+			# to work around an issue where the '0' wasn't being echoed from the
+			# variable directly, and I didn't feel like messing around with
+			# eval "$(echo ...)" stuff.
+			#
+			REMAIN=$((${REMAIN} - ${QUIT_COUNTDOWN_INCR}))
+
+		done;
+	) &
+	local PAUSE_PID=${!}
+
+	sleep ${QUIT_DELAY}
+	kill ${PAUSE_PID}
+
+	exit ${LVL}
+}
+
+# vim: ft=sh
+
