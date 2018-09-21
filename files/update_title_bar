@@ -29,37 +29,31 @@
 #
 
 update_title_bar () {
-  #--- Initialize the PROMPT_COMMAND and trap, if the first arg is "init".
+
+  #--- If the first arg is "init", Initialize the PROMPT_COMMAND.
   if [[ "${1}" == "init" ]]; then
-
-    #-- Add us to PROMPT_COMMAND, if it looks like we aren't already there.
-    if ! [[ "${PROMPT_COMMAND}" =~ update_title_bar ]]; then
-      if [[ "${PROMPT_COMMAND}" != "" ]]; then PROMPT_COMMAND+=";"; fi
-      PROMPT_COMMAND+='update_title_bar 0 ${SHELL}'
-
-    fi
-
-    export PROMPT_COMMAND
-    trap 'update_title_bar ${0}' DEBUG
 
     #--- Set some text replacment defaults.
     if [[ -z "${UTB_TEXT_REPLACE[*]}" ]]; then
       UTB_TEXT_REPLACE=("${HOME}" '~')
-
     fi
+
+    #-- Add to PROMPT_COMMAND and DEBUG trap, if it looks like we
+    # don't already exists in PROMPT_COMMAND.
+    #
+    if ! [[ "${PROMPT_COMMAND}" =~ update_title_bar ]]; then
+      if [[ "${PROMPT_COMMAND}" != "" ]]; then PROMPT_COMMAND+=";"; fi
+      PROMPT_COMMAND+='update_title_bar ${SHELL}'
+    fi
+
+    trap "update_title_bar \${BASH_COMMAND}" DEBUG
+    return 0
   fi
 
   local BCMD="${BASH_COMMAND}"
 
-  #--- the trap command associated with this function passes ${0} as an argument.
-  # If this valye exists, we should be able to assume that we are running in a
-  # script (or during source'ing our bashrc file(s).
-  # The idea is to skip any scripted or source'd commands.
-  local IN_SCRIPT="${1}"
-  local MANUAL_CMD="${2}"
-
-  #--- Entering a second arg to this function overrides the output of the command name.
-  if [[ "${MANUAL_CMD}" != "" ]]; then BCMD="${MANUAL_CMD}"; fi
+  #--- Entering an arg to this function overrides the output of the command name.
+  if [[ "${1}" != "" ]]; then BCMD="${1}"; fi
 
   local CMDRGX="${BCMD//\\/\\\\}"
   CMDRGX="${CMDRGX//\//\\\/}"
@@ -67,58 +61,42 @@ update_title_bar () {
   CMDRGX="${CMDRGX//\{/\\\{}"
   CMDRGX="${CMDRGX//\}/\\\}}"
 
-  #--- Skip any commands that we've deemed to be "scripted".
-  if [[ "${IN_SCRIPT}" == "IN" ]]; then
-    return
-
   #--- Skip any commands that exist in PROMPT_COMMAND
-  # WARNING: Bear in mind that manually-entered commands that match are also ignored.
-  elif [[ ! "${PROMPT_COMMAND}" =~ ${CMDRGX} ]]; then
+  if [[ ! "${PROMPT_COMMAND}" =~ ${CMDRGX} ]]; then
 
-    #--- If BCMD is trying to set the terminal title, we don't do anything.
+    #--- Make sure BCMD isn't trying to set the terminal title.
+    # Skip output if it is.
+    #
     if [[ ! "${BCMD}" =~ \\e\]0\; ]]; then
       local OUT=
 
       #--- Make the title more noticable, if running with root privileges.
-      if [[ ${EUID} == 0 ]]; then
-        OUT+="(ROOT_USER) "
-      else
-        OUT+="${USER}@"
-      fi
+      if [[ ${EUID} == 0 ]]; then   OUT="(ROOT_USER) "
+      else                          OUT="${USER}@";fi
 
       OUT+="${HOSTNAME}:${PWD} [${BCMD}]"
 
       #-- Run text replace on the prompt output.
-      local R=
       for ((E=0; E<${#UTB_TEXT_REPLACE[@]}; E+=2)); do
-        local R="${UTB_TEXT_REPLACE[$E]}"
-
-        local RGX="${R//\\/\\\\}"
-        RGX="${RGX//\//\\\/}"
-        RGX="${RGX//\$/\\\$}"
-        RGX="${RGX//\{/\\\{}"
-        RGX="${RGX//\}/\\\}}"
+        local RGX="${UTB_TEXT_REPLACE[$E]}"
 
         if [[ "${OUT}" =~ ${RGX} ]]; then
           OUT="${OUT//${RGX}/${UTB_TEXT_REPLACE[$((${E}+1))]}}"
-
         fi
+
       done
 
       echo -ne "\e]0;${OUT}\007"
 
     fi
   fi
-
 }
-
-
 
 #--- Some stuff needs to be initialized, for things to work correctly.
 # We can skip init, if it is desirable to init it manually.
 #
 if [[ "${UTB_MANUAL_INIT}" != 1 ]]; then
-	update_title_bar init
+  update_title_bar init
 fi
 
 # vim: ft=sh
