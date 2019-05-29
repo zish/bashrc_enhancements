@@ -106,10 +106,12 @@ ssh () {
 _sshi_debug () {
  local MSG_LVL="${1}"
  local MSG="${2}"
+
  #- Skip debugging output when the destination file is undefined.
- [ -n "${SSHI_DBG_DST}" ] && return
+ if [ -n "${SSHI_DBG_DST}" ]; then return; fi
+
  #- Skip debugging output when the message debug level is less than SSHI_DBG.
- [ ${SSHI_DBG} -lt ${MSG_LVL} ] && return
+ if [ ${SSHI_DBG} -lt ${MSG_LVL} ]; then return; fi
 
  echo -e "${MSG}" >> "${SSHI_DBG_DST}"
 }
@@ -122,10 +124,12 @@ _sshi_debug () {
 _sshi_defaults () {
  local IFS=$'\n'
  while read -r L; do
-  [[ "${L}" =~ ^[[:blank:]]*\# ]] && continue #- Skip comment lines.
-  [[ "${L}" =~ ^[[:blank:]]*([^\ \t\=]+)[[:blank:]]*\=[[:blank:]]*(.*) ]] && {
-   echo "[ -z \"\${${BASH_REMATCH[1]}}\" ]&&local ${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
-  }
+  #- Skip comment lines.
+  if [[ "${L}" =~ ^[[:blank:]]*\# ]]; then continue; fi
+
+  if [[ "${L}" =~ ^[[:blank:]]*([^\ \t\=]+)[[:blank:]]*\=[[:blank:]]*(.*) ]]; then
+   echo "if [ -z \"\${${BASH_REMATCH[1]}}\" ]; then local ${BASH_REMATCH[1]}=${BASH_REMATCH[2]}; fi"
+  fi
  done<<EOF
  SSHI_ADD_SUBS="ssh"
  SSHI_BASH_RCFILES='"${HOME}/.bashrc","${HOME}/.bash_profile","${HOME}/.profile"'
@@ -160,11 +164,11 @@ _sshi_err () {
 _sshi_scancnf () {
  local CF=()
  local OP=()
- [ -f "${1}" ] && CF=(${1})
- [ -f "${2}" ] && CF=(${CF} ${2})
+ if [ -f "${1}" ]; then CF=(${1}); fi
+ if [ -f "${2}" ]; then CF=(${CF} ${2}); fi
  local C=0
  for O in ${*}; do
-  [ ${C} -ge ${#CF[@]} ] && OP=(${OP[@]} ${O})
+  if [ ${C} -ge ${#CF[@]} ]; then OP=(${OP[@]} ${O}); fi
   C=$((${C}+1))
  done
 
@@ -222,36 +226,20 @@ _sshi_scancnf () {
 #-- Clean the SSH Logs dir.
 # Removes .log files smaller than ${SSHI_LOG_MIN_SIZE} and compress .log files
 # older than ${SSHI_LOG_CMP_AGE}.
+#
 _sshi_clean_log_dir () {
  local IFS=$'\n'
  local CT="$(date +'%s')"
- [ -z "${SSHI_LOG_COMPRESS}" ] && {
-  return
- }
- [ ${SSHI_LOG_COMPRESS} -le 0 ] && {
-  return
- }
- [ -z "${SSHI_LOG_CMP_AGE}" ] && {
+ if [ -z "${SSHI_LOG_COMPRESS}" ]; then return; fi
+ if [ ${SSHI_LOG_COMPRESS} -le 0 ]; then return; fi
+
+ if [ -z "${SSHI_LOG_CMP_AGE}" ]; then
   echo "SSHI_LOG_COMPRESS set, but age undefined. Cannot compress old logs." 1>&2
   return
- }
+ fi
+
 # local F=
  #- TODO: Replace find/grep with native Bash or embedded Perl.
- #for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -printf "%Cs %s %p\n"|grep -e "\.log$"); do
-#  [[ "${F}" =~ ^([0-9]+)\ ([0-9]+)\ (.*) ]] && {
-#   local D="$(((${CT}-${BASH_REMATCH[1]})/86400))"
-#   local S="${BASH_REMATCH[2]}"
-#   local L="${BASH_REMATCH[3]}"
-#  }
-#  [ ${D} -ge ${SSHI_LOG_CMP_AGE} ] && {
-#   [ ${S} -lt ${SSHI_LOG_MIN_SIZE} ] && {
-#    echo "Removing ${L} (Size is ${S} bytes. Minimum size is ${SSHI_LOG_MIN_SIZE})." 1>&2
-#    eval "$(_sshi_retry_task 2 2 rm -f ${L})"
-#   } || {
-#    echo "Compressing ${L}" 1>&2
-#    eval "$(_sshi_retry_task ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${L})"
-#   }
-#  }
  local IFS=$'\n'
  for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -mtime +1|grep -e "\.log$"); do
   echo "Compressing ${F}" 1>&2
@@ -292,23 +280,16 @@ _sshi_getrc () {
     if($i){if($c<=$i){print $l;$c++;}else{$c=0; $i=0;}}}
    close($f);
   }}' -- "${1}" "${2}"
-#- 2019-03-07 - JM - Modified to remove the "Included from file" entries in the
-# pushed rc.
-#
-#    if($l=~/^(\s*)\#\s*\[SSHI?_INCLUDE\]\s+(\d+)/){
-#     $i=$2;print $1."#- [SSHI] Included from file \"$rcf\":\n";}
-#    if($i){if($c<=$i){print $l;$c++;}else{$c=0; $i=0;}}}
-#   close($f);
-#  }}' -- "${1}" "${2}"
 }
 
 #-- TODO: Package external files for inclusion.
 _sshi_package_include_files () {
  for I in "${SSHI_INC_FILES[@]}"; do
-  [[ ${I} =~ ^([^:]+):([^:]+)$ ]] && {
+  if [[ ${I} =~ ^([^:]+):([^:]+)$ ]]; then
    echo -ne "\"${BASH_REMATCH[1]}\" "
    echo -ne "\"${BASH_REMATCH[2]}\" "
-  }
+  fi
+
   echo "I: ${I}"
  done
 }
@@ -322,43 +303,48 @@ _sshi_retry_task () {
   #- MR == Max. Retries before giving up.
   # Default is 2.
   local MR=2
-  [[ "${OP[0]}" =~ ^[0-9\.]+$ ]] && {
-   MR=${OP[0]}
-   OP=("${OP[@]:1}")
-  }
+  if [[ "${OP[0]}" =~ ^[0-9\.]+$ ]]; then MR=${OP[0]}; OP=("${OP[@]:1}"); fi
+
   #- TO == Wait this long for command to complete before failing the task.
   # Default is 0 (infinite).
   local TO=0
-  [[ "${OP[0]}" =~ ^[0-9\.]+$ ]] && {
-   TO=${OP[0]}
-   OP=("${OP[@]:1}")
-  }
+
+  if [[ "${OP[0]}" =~ ^[0-9\.]+$ ]]; then TO=${OP[0]}; OP=("${OP[@]:1}"); fi
+
   local OUT=
   local LP=1
   local CT=0
   while [ ${LP} -ge 1 ]; do
    CT=$((${CT}+1))
-   [ ${TO} -eq 0 ] && {
+
+   if [ ${TO} -eq 0 ]; then
     eval "OUT=\"$(${OP[@]}; LP=${?}; echo "\"; LP=${LP}")"
-   } || {
+
+   else
     eval "OUT=\"$(START=${SECONDS};ERR=0;DONE=0;${OP[@]} 2>&1 || ERR=${?} & \
      CHILDPID=${!};echo -e "\";LP=\"${ERR}"; \
      while [ ${DONE} -lt 1 ]; do P=$(ps -ef|grep ${CHILDPID}|grep -v grep); \
-     [ -z "${P}" ] && { DONE=1; } || { \
-      [ $((${SECONDS} - ${START})) -ge ${TO} ] && { DONE=1; } || { \
+     if [ -z "${P}" ]; then
+      DONE=1
+     else
+      if [ $((${SECONDS} - ${START})) -ge ${TO} ]; then
+       DONE=1
+      else
 #       echo "------------------------------------------" >> psout; \
 #       echo "child pid: ${CHILDPID}" >> psout; \
 #       echo "cmd: \"${OP[@]}\"" >> psout; \
 #       ps -ef >> psout; \
        sleep 0.2;DONE=0; \
-      };};done)\""
+      fi
+     fi
+    done)\""
 #    echo -e "OUT \"${OUT}\"" 1>&2
-   }
+   fi
 
-   [ ${LP} -ge 1 ] && {
-    [ ${CT} -ge ${MR} ] && break
+   if [ ${LP} -ge 1 ]; then
+    if [ ${CT} -ge ${MR} ]; then break; fi
     sleep "0.1${RANDOM}"
-   }
+   fi
   done
 
   echo -e "R_O=\"${OUT}\";R_T=${LP}"
@@ -380,34 +366,30 @@ eval "$(_sshi_scancnf ${SSHI_UC} ${SSHI_MC} ${@})"
 local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
 
 #-- Determine if we should log.
-[ -n "${SSHI_IS_SSH}" ] && [ -n "${SSHI_NO_LOG_REMOTE}" ] && {
+if [ -n "${SSHI_IS_SSH}" ] && [ -n "${SSHI_NO_LOG_REMOTE}" ]; then
  S_NL=1
  unset S_LF
 
-} || {
+else
 
  #- Log by default. Turn off logging when requested.
- [ -n "${SSHI_LOG_BY_DEF}" ] && {
-  [ -n "${S_NL}" ] && unset S_LG S_NL || S_LG=1
-
- } || {
-
- #- Do not log by default. Turn on logging when requested.
-  [ -n "${S_LG}" ] && local S_LG=1
- }
+ if [ -n "${SSHI_LOG_BY_DEF}" ]; then
+  if [ -n "${S_NL}" ]; then unset S_LG S_NL || S_LG=1; fi
+ else
+  #- Do not log by default. Turn on logging when requested.
+  if [ -n "${S_LG}" ]; then local S_LG=1; fi
+ fi
 
  #- Make sure log location is writable.
- [ -n "${S_LG}" ] && {
+ if [ -n "${S_LG}" ]; then
   local S_LF="${SSHI_LOG_LOC}/${S_LFM}"
 
   #- Create SSH log directory if needed.
-  [ -n "${SSHI_LOG_LOC}" ] && {
-   [ -n ${SSHI_CREATE_LOG_LOC} ] && {
-    [ ! -e ${SSHI_LOG_LOC} ] && {
-     eval "$(_sshi_retry_task 1 1 mkdir -p ${SSHI_LOG_LOC})"
-    }
-   }
-  }
+  if [ -n "${SSHI_LOG_LOC}" ] && [ -n ${SSHI_CREATE_LOG_LOC} ]; then
+   if [ ! -e ${SSHI_LOG_LOC} ]; then
+    eval "$(_sshi_retry_task 1 1 mkdir -p ${SSHI_LOG_LOC})"
+   fi
+  fi
 
   #- Make sure log directory is writeable. Try twice, after pausing for a bit.
   # The length is randomized to compensate for > 2 simultaneous SSH sessions
@@ -421,62 +403,60 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
    S_E=$((${S_E}+${R_T}))
    eval "$(_sshi_retry_task 2 2 touch ${WT})"
    S_E=$((${S_E}+${R_T}))
-   [ ${S_E} = 0 ] && {
-    OK=1
-   } || {
-    sleep "0.1${RANDOM}"
-   }
+
+   if [ ${S_E} = 0 ]; then OK=1; else sleep "0.1${RANDOM}"; fi
   done
 
-  [ ${S_E} -gt 0 ] && {
+  if [ ${S_E} -gt 0 ]; then
    _sshi_err "Unable to write to directory '${SSHI_LOG_LOC}'.\nSession will not be logged."
    unset S_LF
-  } || {
+  else
    _sshi_clean_log_dir
    touch ${S_LF}
-  }
- }
-} 
+  fi
+
+ fi
+
+fi
 
 #--- TODO: Remove this after converting log alias to python.
 #- Had a problem with the embedded __sshi_l alias with older Perl versions.
 # Not going to figure it out for now.
 # We fall back to "tee -i", if the version is lower than 5.18.
-PC="perl -e 'use v5.18;' 2>/dev/null;[ \${?} -gt 0 ]&&{ echo 1>&2;
+PC="perl -e 'use v5.18;' 2>/dev/null;if [ \${?} -gt 0 ]; then echo 1>&2;
  OPERL=1;echo '**** WARNING: Perl version is earlier than 5.18.     ****' 1>&2;
- echo '**** Using tee -i for logging (NO OUTPUT FILTERING). ****' 1>&2;echo 1>&2;}"
+ echo '**** Using tee -i for logging (NO OUTPUT FILTERING). ****' 1>&2;echo 1>&2; fi"
 eval "${PC}"
 
 #--- TODO: Remove this after converting log alias to python.
 #- A log file needs to be defined to log. Also, no logging when a remote
 # SSH command was entered via CLI.
-[ -n "${S_LF}" ] && [ -z "${SSHREMCMD}" ] && {
- [ -z "${OPERL}" ] && {
-  LC="__sshi_l ${S_LF}"
- } || {
-  LC="tee -i ${S_LF}"
- }
-}
+if [ -n "${S_LF}" ] && [ -z "${SSHREMCMD}" ]; then
+ if [ -z "${OPERL}" ]; then LC="__sshi_l ${S_LF}"
+ else LC="tee -i ${S_LF}"; fi
+fi
 
 #- Skip prompt and rc file shipping if requested.
-[ -n "${NOPROMPT}" ] && unset S_F
+if [ -n "${NOPROMPT}" ]; then unset S_F; fi
 
 #- Parse things and connect if we have a matched entry in the SSH config.
-[ -n "${S_F}" ] && {
+if [ -n "${S_F}" ]; then
 
  #- PROMPTONLY set on a host .ssh/config. Set things accordingly.
- [ -n "${PROMPTONLY}" ] && {
-  [ -n "${SSHI_RPS1}" ] && {
+ if [ -n "${PROMPTONLY}" ]; then
+  if [ -n "${SSHI_RPS1}" ]; then
    echo "Connecting to ${S_F} with local prompt." 1>&2
-   [ -z "${SSHREMCMD}" ] &&
+   if [ -z "${SSHREMCMD}" ]; then
     SSHREMCMD="export PS1=\"${SSHI_RPS1}\";exec bash"
-  }
- } || {
+   fi
+  fi
+
+ else
 
   #- The rcfile to use remotely. Regenerates every time you log in.
   # local .bashrc will be called at the end. Overrides can be defined on the remote.
   # This variable is exported for use on remote systems.
-  [ -z "${RCPUSH}" ] && RCPUSH=".bashrc_pushed-${USER}"
+  if [ -z "${RCPUSH}" ]; then RCPUSH=".bashrc_pushed-${USER}"; fi
 
   #- Add an alias to bash (use your customized bash env).
   local USH="alias bash='/bin/bash --rcfile ~/${RCPUSH}'"
@@ -489,13 +469,13 @@ eval "${PC}"
   local OI=${IFS}
   IFS=$'\n'
   for A in $(alias); do
+
    #--- TODO: Remove this after converting log alias to python.
    #- Replace the __sshi_l alias, if an old Perl version was found locally.
-   [[ "${A}" =~ ^alias\ __sshi_l ]] && {
-    [ -n "${OPERL}" ] && {
-     A="alias __sshi_l='tee -i'"
-    }
-   }
+   if [[ "${A}" =~ ^alias\ __sshi_l ]]; then
+    if [ -n "${OPERL}" ]; then A="alias __sshi_l='tee -i'"; fi
+   fi
+
    S_A="${S_A}${A};"
   done
   IFS=${OI}
@@ -515,26 +495,28 @@ eval "${PC}"
   local RFUNCS="export RCPUSH=${RCPUSH};$(_sshi_getrc "${SSHI_BASH_RCFILES}" "${SSHI_ADD_SUBS}")"
   local RFUNCS_E="sleep 0.2;echo \"$(echo "${RFUNCS}"|eval ${S_BE})\"|${S_BD}>~/${RCPUSH}.rc;source ~/${RCPUSH}.rc"
   RBASHRC_E="export SSHI_IS_SSH=1;${S_A}${RFUNCS_E}"
-  [ -n "${SSHI_RPS1}" ] && RBASHRC_E+=";export PS1=\"${SSHI_RPS1}\""
+  if [ -n "${SSHI_RPS1}" ]; then RBASHRC_E+=";export PS1=\"${SSHI_RPS1}\""; fi
   RBASHRC_E=${RBASHRC_E//\$/\\$}
   RBASHRC_E=${RBASHRC_E//\"/\\\"}
-  [ -z "${SSHREMCMD}" ] &&
+
+  if [ -z "${SSHREMCMD}" ]; then
    SSHREMCMD="echo \"${RBASHRC_E}\">~/${RCPUSH};exec bash --rcfile ~/${RCPUSH}"
- }
-}
+  fi
+
+ fi
+
+fi
 
 #-- Compile the SSH command to run (including logging stuff) and run it.
 local SSHEXEC=("${SSHI_SSH_BIN}" ${SSH_OPTS})
-[ -n "${SSHREMCMD}" ] && SSHEXEC=(${SSHEXEC[@]} "-t" "${SSHREMCMD}")
+if [ -n "${SSHREMCMD}" ]; then SSHEXEC=(${SSHEXEC[@]} "-t" "${SSHREMCMD}"); fi
 
-[ -n "${LC}" ] && {
- ${SSHEXEC[*]} | eval ${LC}
-} || {
- ${SSHEXEC[*]}
-}
+if [ -n "${LC}" ]; then
+ ${SSHEXEC[*]} | eval ${LC}; else ${SSHEXEC[*]}
+ #-- Logging report.
+ echo "------------------------------" 1>&2
+fi
 
-#-- Logging report.
-if [ -n "${LC}" ]; then echo "------------------------------" 1>&2; fi
 if [ -n "${S_LG}" ]; then
  if [ -n "${S_LF}" ]; then
 
@@ -544,8 +526,9 @@ if [ -n "${S_LG}" ]; then
   else
 
    #- Warn the user of zero-length log, and clear the file.
-   [ -n "${LC}" ] && echo "No output logged from session. Removing ${S_LF}" 1>&2
-   rm "${S_LF}"
+   if [ -n "${LC}" ]; then
+    echo "No output logged from session. Removing ${S_LF}" 1>&2; rm "${S_LF}"
+   fi
   fi
 
  #- Warn the user that we were unable to write the session log.
