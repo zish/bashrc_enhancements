@@ -104,14 +104,16 @@ ssh () {
 
 #-- Debugging output subroutine. Only logs output when SSHI_DBG > MSG_LVL.
 _sshi_debug () {
- local MSG_LVL="${1}"
- local MSG="${2}"
- #- Skip debugging output when the destination file is undefined.
- [ -n "${SSHI_DBG_DST}" ] && return
- #- Skip debugging output when the message debug level is less than SSHI_DBG.
- [ ${SSHI_DBG} -lt ${MSG_LVL} ] && return
+	local MSG_LVL="${1}"
+	local MSG="${2}"
 
- echo -e "${MSG}" >> "${SSHI_DBG_DST}"
+	#- Skip debugging output when the destination file is undefined.
+	if [[ "${SSHI_DBG_DST}" != "" ]]; then return; fi
+
+	#- Skip debugging output when the message debug level is less than SSHI_DBG.
+	if [[ ${SSHI_DBG} -lt ${MSG_LVL} ]]; then return; fi
+
+	echo -e "${MSG}" >> "${SSHI_DBG_DST}"
 }
 
 #-- Subroutine to set the configuration defaults, if no global overrides
@@ -120,70 +122,75 @@ _sshi_debug () {
 # ** DO NOT MODIFY THESE DIRECTLY. THEY      **
 # ** SHOULD BE DEFINED IN YOUR LOCAL bashrc. **
 _sshi_defaults () {
- local IFS=$'\n'
- while read -r L; do
-  [[ "${L}" =~ ^[[:blank:]]*\# ]] && continue #- Skip comment lines.
-  [[ "${L}" =~ ^[[:blank:]]*([^\ \t\=]+)[[:blank:]]*\=[[:blank:]]*(.*) ]] && {
-   echo "[ -z \"\${${BASH_REMATCH[1]}}\" ]&&local ${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
-  }
- done<<EOF
- SSHI_ADD_SUBS="ssh"
- SSHI_BASH_RCFILES='"${HOME}/.bashrc","${HOME}/.bash_profile","${HOME}/.profile"'
- SSHI_DBG=4
- SSHI_DBG_DST=
- SSHI_INC_FILES=()
- SSHI_INC_FILES_ARCHIVE_LOC=
- SSHI_UC=~/.ssh/config
-# SSHI_MC=/etc/ssh/ssh_config
- SSHI_LOG_BY_DEF=1
- SSHI_LOG_LOC=~/ssh_logs
- SSHI_CREATE_LOG_LOC=1
- SSHI_NO_LOG_REMOTE=1
- SSHI_LOG_COMPRESS=1
- SSHI_LOG_CMP_AGE=3
- SSHI_LOG_MIN_SIZE=512
- SSHI_LOG_CMP_BIN=gzip
- SSHI_LOG_CMP_OPTS=-9
- SSHI_SSH_BIN=/usr/bin/ssh
+	local IFS=$'\n'
+	while read -r L; do
+		#- Skip comment lines.
+		if [[ "${L}" =~ ^[[:blank:]]*\# ]]; then continue; fi
+
+		if [[ "${L}" =~ ^[[:blank:]]*([^\ \t\=]+)[[:blank:]]*\=[[:blank:]]*(.*) ]]; then
+			echo "[ -z \"\${${BASH_REMATCH[1]}}\" ]&&local ${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
+		fi
+	done<<EOF
+	SSHI_ADD_SUBS="ssh"
+	SSHI_BASH_RCFILES='"${HOME}/.bashrc","${HOME}/.bash_profile","${HOME}/.profile"'
+	SSHI_DBG=4
+	SSHI_DBG_DST=
+	SSHI_INC_FILES=()
+	SSHI_INC_FILES_ARCHIVE_LOC=
+	SSHI_UC=~/.ssh/config
+#	SSHI_MC=/etc/ssh/ssh_config
+	SSHI_LOG_BY_DEF=1
+	SSHI_LOG_LOC=~/ssh_logs
+	SSHI_CREATE_LOG_LOC=1
+	SSHI_NO_LOG_REMOTE=1
+	SSHI_LOG_COMPRESS=1
+	SSHI_LOG_CMP_AGE=3
+	SSHI_LOG_MIN_SIZE=512
+	SSHI_LOG_CMP_BIN=gzip
+	SSHI_LOG_CMP_OPTS=-9
+	SSHI_SSH_BIN=/usr/bin/ssh
 EOF
-# SSHI_RPS1='\[\e[1;1m\](\[\e[1;31m\]SSH\[\e[0;1m\])\[\e[0;37m\]${PS1}'
+
+#	SSHI_RPS1='\[\e[1;1m\](\[\e[1;31m\]SSH\[\e[0;1m\])\[\e[0;37m\]${PS1}'
+
 }
 
 #-- Format and output local error messages.
 _sshi_err () {
- local S="****************\n"
- echo -e "${S}\a\a\aWARNING: ${1}${S}" 1>&2
+	local S="****************\n"
+	echo -e "${S}\a\a\aWARNING: ${1}${S}" 1>&2
 }
 
 #-- Get SSH hostname and scan conf(s). Missing files are ignored.
 # $1 is user config. $2 is main conf. Rest are SSH options.
 _sshi_scancnf () {
- local CF=()
- local OP=()
- [ -f "${1}" ] && CF=(${1})
- [ -f "${2}" ] && CF=(${CF} ${2})
- local C=0
- for O in ${*}; do
-  [ ${C} -ge ${#CF[@]} ] && OP=(${OP[@]} ${O})
-  C=$((${C}+1))
- done
+	local CF=()
+	local OP=()
+	if [ -f "${1}" ]; then CF=(${1}); fi
+	if [ -f "${2}" ]; then CF=(${CF} ${2}); fi
 
- #- SSH Command line option knowledge.
- # These are the known options for my installed OpenSSH version (v.7.2p2).
- #  (1)-  : Opts with NO argument. ( $sw )
- #  (2)-  : Opts WITH AN argument. ( $op )
- #  (3)-  : Decouple user@ prefix.
- #  (4)-  : Only host lines
- #  (5)-  : Escape wildcard types
- #  (6)-  : The first unrecognized option entered will be considered the "host".
- #  (7)-  : sh == SSH Host (and user, if defined).
- #  (8)-  : sc == SSH Remote Command
- #  (9)-  : If the SSH Host has been defined, we assume the first unregonized
- #          opt is a remote command to exec.
- #  (10)- : If the SSH Remote Command is nonzero, we assume that anything else
- #          is an option for the remote command.
- #  (11)- : so == SSH Opts
- cat ${CF[@]} | perl -e '
+	local C=0
+	for O in ${*}; do
+		if [ ${C} -ge ${#CF[@]} ]; then OP=(${OP[@]} ${O}); fi
+		C=$((${C}+1))
+	done
+
+	#- SSH Command line option knowledge.
+	# These are the known options for my installed OpenSSH version (v.7.2p2).
+	#  (1)-  : Opts with NO argument. ( $sw )
+	#  (2)-  : Opts WITH AN argument. ( $op )
+	#  (3)-  : Decouple user@ prefix.
+	#  (4)-  : Only host lines
+	#  (5)-  : Escape wildcard types
+	#  (6)-  : The first unrecognized option entered will be considered the "host".
+	#  (7)-  : sh == SSH Host (and user, if defined).
+	#  (8)-  : sc == SSH Remote Command
+	#  (9)-  : If the SSH Host has been defined, we assume the first unregonized
+	#          opt is a remote command to exec.
+	#  (10)- : If the SSH Remote Command is nonzero, we assume that anything else
+	#          is an option for the remote command.
+	#  (11)- : so == SSH Opts
+	cat ${CF[@]} | perl -e '
  sub o{
   $r="^\\s*$_[1]";print "local ".$_[0]."\n"if((!$_[1])||(grep(/$r/,@{$_[2]})));
  }
@@ -223,45 +230,28 @@ _sshi_scancnf () {
 # Removes .log files smaller than ${SSHI_LOG_MIN_SIZE} and compress .log files
 # older than ${SSHI_LOG_CMP_AGE}.
 _sshi_clean_log_dir () {
- local IFS=$'\n'
- local CT="$(date +'%s')"
- [ -z "${SSHI_LOG_COMPRESS}" ] && {
-  return
- }
- [ ${SSHI_LOG_COMPRESS} -le 0 ] && {
-  return
- }
- [ -z "${SSHI_LOG_CMP_AGE}" ] && {
-  echo "SSHI_LOG_COMPRESS set, but age undefined. Cannot compress old logs." 1>&2
-  return
- }
-# local F=
- #- TODO: Replace find/grep with native Bash or embedded Perl.
- #for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -printf "%Cs %s %p\n"|grep -e "\.log$"); do
-#  [[ "${F}" =~ ^([0-9]+)\ ([0-9]+)\ (.*) ]] && {
-#   local D="$(((${CT}-${BASH_REMATCH[1]})/86400))"
-#   local S="${BASH_REMATCH[2]}"
-#   local L="${BASH_REMATCH[3]}"
-#  }
-#  [ ${D} -ge ${SSHI_LOG_CMP_AGE} ] && {
-#   [ ${S} -lt ${SSHI_LOG_MIN_SIZE} ] && {
-#    echo "Removing ${L} (Size is ${S} bytes. Minimum size is ${SSHI_LOG_MIN_SIZE})." 1>&2
-#    eval "$(_sshi_retry_task 2 2 rm -f ${L})"
-#   } || {
-#    echo "Compressing ${L}" 1>&2
-#    eval "$(_sshi_retry_task ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${L})"
-#   }
-#  }
- local IFS=$'\n'
- for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -mtime +1|grep -e "\.log$"); do
-  echo "Compressing ${F}" 1>&2
-  eval "$(_sshi_retry_task ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${F})"
- done
+	local IFS=$'\n'
+	local CT="$(date +'%s')"
 
- for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -size -${SSHI_LOG_MIN_SIZE}c |grep -e "\.log$"); do
-  echo "Removing ${F}. File is smaller than minimum allowed size (${SSHI_LOG_MIN_SIZE} bytes)." 1>&2
-  eval "$(_sshi_retry_task 2 2 rm -f ${F})"
- done
+	if [[ "${SSHI_LOG_COMPRESS}" == "" ]]; then return; fi
+	if [ ${SSHI_LOG_COMPRESS} -le 0 ]; then return; fi
+
+	if [[ "${SSHI_LOG_CMP_AGE}" == "" ]]; then
+		echo "SSHI_LOG_COMPRESS set, but age undefined. Cannot compress old logs." 1>&2
+		return
+	fi
+
+	#- TODO: Replace find/grep with native Bash or embedded Perl.
+	local IFS=$'\n'
+	for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -mtime +1|grep -e "\.log$"); do
+		echo "Compressing ${F}" 1>&2
+		eval "$(_sshi_retry_task ${SSHI_LOG_CMP_BIN} ${SSHI_LOG_CMP_OPTS} ${F})"
+	done
+
+	for F in $(find ${SSHI_LOG_LOC} -maxdepth 1 -size -${SSHI_LOG_MIN_SIZE}c |grep -e "\.log$"); do
+		echo "Removing ${F}. File is smaller than minimum allowed size (${SSHI_LOG_MIN_SIZE} bytes)." 1>&2
+		eval "$(_sshi_retry_task 2 2 rm -f ${F})"
+	done
 }
 
 #-- Pull requested functions defined by SSHI_ADD_SUBS.
@@ -304,13 +294,15 @@ _sshi_getrc () {
 
 #-- TODO: Package external files for inclusion.
 _sshi_package_include_files () {
- for I in "${SSHI_INC_FILES[@]}"; do
-  [[ ${I} =~ ^([^:]+):([^:]+)$ ]] && {
-   echo -ne "\"${BASH_REMATCH[1]}\" "
-   echo -ne "\"${BASH_REMATCH[2]}\" "
-  }
-  echo "I: ${I}"
- done
+	for I in "${SSHI_INC_FILES[@]}"; do
+
+		if [[ ${I} =~ ^([^:]+):([^:]+)$ ]]; then
+			echo -ne "\"${BASH_REMATCH[1]}\" "
+			echo -ne "\"${BASH_REMATCH[2]}\" "
+		fi
+		echo "I: ${I}"
+
+	done
 }
 
 #-- Retry execution of a task for a maximum number of tries, pausing
@@ -318,50 +310,55 @@ _sshi_package_include_files () {
 #
 # This is called using an eval. It outputs the results as R_O and R_T.
 _sshi_retry_task () {
-  local OP=(${@})
-  #- MR == Max. Retries before giving up.
-  # Default is 2.
-  local MR=2
-  [[ "${OP[0]}" =~ ^[0-9\.]+$ ]] && {
-   MR=${OP[0]}
-   OP=("${OP[@]:1}")
-  }
-  #- TO == Wait this long for command to complete before failing the task.
-  # Default is 0 (infinite).
-  local TO=0
-  [[ "${OP[0]}" =~ ^[0-9\.]+$ ]] && {
-   TO=${OP[0]}
-   OP=("${OP[@]:1}")
-  }
-  local OUT=
-  local LP=1
-  local CT=0
-  while [ ${LP} -ge 1 ]; do
-   CT=$((${CT}+1))
-   [ ${TO} -eq 0 ] && {
-    eval "OUT=\"$(${OP[@]}; LP=${?}; echo "\"; LP=${LP}")"
-   } || {
-    eval "OUT=\"$(START=${SECONDS};ERR=0;DONE=0;${OP[@]} 2>&1 || ERR=${?} & \
-     CHILDPID=${!};echo -e "\";LP=\"${ERR}"; \
-     while [ ${DONE} -lt 1 ]; do P=$(ps -ef|grep ${CHILDPID}|grep -v grep); \
-     [ -z "${P}" ] && { DONE=1; } || { \
-      [ $((${SECONDS} - ${START})) -ge ${TO} ] && { DONE=1; } || { \
-#       echo "------------------------------------------" >> psout; \
-#       echo "child pid: ${CHILDPID}" >> psout; \
-#       echo "cmd: \"${OP[@]}\"" >> psout; \
-#       ps -ef >> psout; \
-       sleep 0.2;DONE=0; \
-      };};done)\""
-#    echo -e "OUT \"${OUT}\"" 1>&2
-   }
+	local OP=(${@})
+	#- MR == Max. Retries before giving up.
+	# Default is 2.
+	#
+	local MR=2
+	if [[ "${OP[0]}" =~ ^[0-9\.]+$ ]]; then
+		MR=${OP[0]}
+		OP=("${OP[@]:1}")
+	fi
 
-   [ ${LP} -ge 1 ] && {
-    [ ${CT} -ge ${MR} ] && break
-    sleep "0.1${RANDOM}"
-   }
-  done
+	#- TO == Wait this long for command to complete before failing the task.
+	# Default is 0 (infinite).
+	#
+	local TO=0
+	if [[ "${OP[0]}" =~ ^[0-9\.]+$ ]]; then
+		TO=${OP[0]}
+		OP=("${OP[@]:1}")
+	fi
 
-  echo -e "R_O=\"${OUT}\";R_T=${LP}"
+	local OUT=
+	local LP=1
+	local CT=0
+
+	while [ ${LP} -ge 1 ]; do
+		CT=$((${CT}+1))
+		[ ${TO} -eq 0 ] && {
+			eval "OUT=\"$(${OP[@]}; LP=${?}; echo "\"; LP=${LP}")"
+		} || {
+			eval "OUT=\"$(START=${SECONDS};ERR=0;DONE=0;${OP[@]} 2>&1 || ERR=${?} & \
+				CHILDPID=${!};echo -e "\";LP=\"${ERR}"; \
+				while [ ${DONE} -lt 1 ]; do P=$(ps -ef|grep ${CHILDPID}|grep -v grep); \
+					[ -z "${P}" ] && { DONE=1; } || { \
+					[ $((${SECONDS} - ${START})) -ge ${TO} ] && { DONE=1; } || { \
+#					echo "------------------------------------------" >> psout; \
+#					echo "child pid: ${CHILDPID}" >> psout; \
+#					echo "cmd: \"${OP[@]}\"" >> psout; \
+#					ps -ef >> psout; \
+					sleep 0.2;DONE=0; \
+				};};done)\""
+#				echo -e "OUT \"${OUT}\"" 1>&2
+		}
+
+		[ ${LP} -ge 1 ] && {
+			[ ${CT} -ge ${MR} ] && break
+			sleep "0.1${RANDOM}"
+		}
+	done
+
+	echo -e "R_O=\"${OUT}\";R_T=${LP}"
 }
 
 #-- Use Python for BASE64 encode/decode. This eliminates the need to
@@ -381,8 +378,8 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
 
 #-- Determine if we should log.
 [ -n "${SSHI_IS_SSH}" ] && [ -n "${SSHI_NO_LOG_REMOTE}" ] && {
- S_NL=1
- unset S_LF
+	S_NL=1
+	unset S_LF
 
 } || {
 
@@ -450,111 +447,118 @@ eval "${PC}"
 #--- TODO: Remove this after converting log alias to python.
 #- A log file needs to be defined to log. Also, no logging when a remote
 # SSH command was entered via CLI.
-[ -n "${S_LF}" ] && [ -z "${SSHREMCMD}" ] && {
- [ -z "${OPERL}" ] && {
-  LC="__sshi_l ${S_LF}"
- } || {
-  LC="tee -i ${S_LF}"
- }
-}
-
-#- Skip prompt and rc file shipping if requested.
-[ -n "${NOPROMPT}" ] && unset S_F
-
-#- Parse things and connect if we have a matched entry in the SSH config.
-[ -n "${S_F}" ] && {
-
- #- PROMPTONLY set on a host .ssh/config. Set things accordingly.
- [ -n "${PROMPTONLY}" ] && {
-  [ -n "${SSHI_RPS1}" ] && {
-   echo "Connecting to ${S_F} with local prompt." 1>&2
-   [ -z "${SSHREMCMD}" ] &&
-    SSHREMCMD="export PS1=\"${SSHI_RPS1}\";exec bash"
-  }
- } || {
-
-  #- The rcfile to use remotely. Regenerates every time you log in.
-  # local .bashrc will be called at the end. Overrides can be defined on the remote.
-  # This variable is exported for use on remote systems.
-  [ -z "${RCPUSH}" ] && RCPUSH=".bashrc_pushed-${USER}"
-
-  #- Add an alias to bash (use your customized bash env).
-  local USH="alias bash='/bin/bash --rcfile ~/${RCPUSH}'"
-
-  local RBASHRC_E=
-  echo -e "Connecting to ${S_F} with local shell includes.\n" 1>&2
-
-  #- Gather aliases.
-  local S_A=
-  local OI=${IFS}
-  IFS=$'\n'
-  for A in $(alias); do
-   #--- TODO: Remove this after converting log alias to python.
-   #- Replace the __sshi_l alias, if an old Perl version was found locally.
-   [[ "${A}" =~ ^alias\ __sshi_l ]] && {
-    [ -n "${OPERL}" ] && {
-     A="alias __sshi_l='tee -i'"
-    }
-   }
-   S_A="${S_A}${A};"
-  done
-  IFS=${OI}
-
-  #- Use RCPUSH file if in an SSH session. Allows you to reuse your shipped stuff when
-  # using ssh on remote systems.
-  # ** This only really matters when ssh is included in SSHI_ADD_SUBS.
-  # Attempt to use pushed rc if SSH. Use local rc if non-SSH
-  if [ -n "${SSHI_IS_SSH}" -a -e "~/${RCPUSH}" ]; then
-   SSHI_BASH_RCFILES="~/${RCPUSH}"
-  fi
-
-  #- Retrieve SSHI_ADD_SUBS functions and [SSH_INCLUDE] lines.
-  # Functions need to be decoded before 'source'ing them (for some reason).
-  # Decoded output is piped to RCPUSH.rc file, which is sourced from the
-  # pushed rc file.
-  local RFUNCS="export RCPUSH=${RCPUSH};$(_sshi_getrc "${SSHI_BASH_RCFILES}" "${SSHI_ADD_SUBS}")"
-  local RFUNCS_E="sleep 0.2;echo \"$(echo "${RFUNCS}"|eval ${S_BE})\"|${S_BD}>~/${RCPUSH}.rc;source ~/${RCPUSH}.rc"
-  RBASHRC_E="export SSHI_IS_SSH=1;${S_A}${RFUNCS_E}"
-  [ -n "${SSHI_RPS1}" ] && RBASHRC_E+=";export PS1=\"${SSHI_RPS1}\""
-  RBASHRC_E=${RBASHRC_E//\$/\\$}
-  RBASHRC_E=${RBASHRC_E//\"/\\\"}
-  [ -z "${SSHREMCMD}" ] &&
-   SSHREMCMD="echo \"${RBASHRC_E}\">~/${RCPUSH};exec bash --rcfile ~/${RCPUSH}"
- }
-}
-
-#-- Compile the SSH command to run (including logging stuff) and run it.
-local SSHEXEC=("${SSHI_SSH_BIN}" ${SSH_OPTS})
-[ -n "${SSHREMCMD}" ] && SSHEXEC=(${SSHEXEC[@]} "-t" "${SSHREMCMD}")
-
-[ -n "${LC}" ] && {
- ${SSHEXEC[*]} | eval ${LC}
-} || {
- ${SSHEXEC[*]}
-}
-
-#-- Logging report.
-if [ -n "${LC}" ]; then echo "------------------------------" 1>&2; fi
-if [ -n "${S_LG}" ]; then
- if [ -n "${S_LF}" ]; then
-
-  #- Report the log file name, if it is not zero-length. Otherwise remove the file.
-  if [ -s "${S_LF}" ]; then
-   echo "Session logged to ${S_LF}" 1>&2
-  else
-
-   #- Warn the user of zero-length log, and clear the file.
-   [ -n "${LC}" ] && echo "No output logged from session. Removing ${S_LF}" 1>&2
-   rm "${S_LF}"
-  fi
-
- #- Warn the user that we were unable to write the session log.
- else
-  echo -ne "WARNING: Logging is enabled, but unable to write to log." 1>&2
-  echo -e " Please verify that SSHI_LOG_LOC is correct." 1>&2
- fi
+if [[ "${S_LF}" != "" ]] && [[ "${SSHREMCMD}" == "" ]]; then
+	if [[ "${OPERL}" == "" ]]; then LC="__sshi_l ${S_LF}"; else LC="tee -i ${S_LF}"; fi
 fi
 
+#- Skip prompt and rc file shipping if requested.
+if [[ "${NOPROMPT}" != "" ]]; then unset S_F; fi
+
+#- Parse things and connect if we have a matched entry in the SSH config.
+if [[ "${S_F}" != "" ]]; then
+	#- PROMPTONLY set on a host .ssh/config. Set things accordingly.
+	if [[ "${PROMPTONLY}" != "" ]]; then
+		if [[ "${SSHI_RPS1}" != "" ]]; then
+			echo "Connecting to ${S_F} with local prompt." 1>&2
+			if [[ "${SSHREMCMD}" == "" ]]; then
+				SSHREMCMD="export PS1=\"${SSHI_RPS1}\";exec bash"
+			fi
+		fi
+
+	else
+
+		#- The rcfile to use remotely. Regenerates every time you log in.
+		# local .bashrc will be called at the end. Overrides can be defined on the remote.
+		# This variable is exported for use on remote systems.
+		#
+		if [[ "${RCPUSH}" == "" ]]; then RCPUSH=".bashrc_pushed-${USER}"; fi
+
+		#- Add an alias to bash (use your customized bash env).
+		local USH="alias bash='/bin/bash --rcfile ~/${RCPUSH}'"
+
+		local RBASHRC_E=
+		echo -e "Connecting to ${S_F} with local shell includes.\n" 1>&2
+
+		#- Gather aliases.
+		local S_A=
+		local OI=${IFS}
+		IFS=$'\n'
+		for A in $(alias); do
+
+#--- TODO: Remove this after converting log alias to python.
+			#- Replace the __sshi_l alias, if an old Perl version was found locally.
+			if [[ "${A}" =~ ^alias\ __sshi_l ]] && [[ "${OPERL}" != "" ]]; then
+				A="alias __sshi_l='tee -i'"
+			fi
+			S_A="${S_A}${A};"
+
+		done
+		IFS=${OI}
+
+		#- Use RCPUSH file if in an SSH session. Allows you to reuse your shipped stuff when
+		# using ssh on remote systems.
+		# ** This only really matters when ssh is included in SSHI_ADD_SUBS.
+		# Attempt to use pushed rc if SSH. Use local rc if non-SSH
+		if [ -n "${SSHI_IS_SSH}" -a -e "~/${RCPUSH}" ]; then
+			SSHI_BASH_RCFILES="~/${RCPUSH}"
+		fi
+
+		#- Retrieve SSHI_ADD_SUBS functions and [SSH_INCLUDE] lines.
+		# Functions need to be decoded before 'source'ing them (for some reason).
+		# Decoded output is piped to RCPUSH.rc file, which is sourced from the
+		# pushed rc file.
+		local RFUNCS="export RCPUSH=${RCPUSH};$(_sshi_getrc "${SSHI_BASH_RCFILES}" "${SSHI_ADD_SUBS}")"
+		local RFUNCS_E="sleep 0.2;echo \"$(echo "${RFUNCS}"|eval ${S_BE})\"|${S_BD}>~/${RCPUSH}.rc;source ~/${RCPUSH}.rc"
+		RBASHRC_E="export SSHI_IS_SSH=1;${S_A}${RFUNCS_E}"
+
+		if [[ "${SSHI_RPS1}" != "" ]]; then RBASHRC_E+=";export PS1=\"${SSHI_RPS1}\""; fi
+
+		RBASHRC_E=${RBASHRC_E//\$/\\$}
+		RBASHRC_E=${RBASHRC_E//\"/\\\"}
+
+		if [[ "${SSHREMCMD}" == "" ]]; then
+			SSHREMCMD="echo \"${RBASHRC_E}\">~/${RCPUSH};exec bash --rcfile ~/${RCPUSH}"
+		fi
+
+	fi
+fi
+
+	#-- Compile the SSH command to run (including logging stuff) and run it.
+	local SSHEXEC=("${SSHI_SSH_BIN}" ${SSH_OPTS})
+	if [[ "${SSHREMCMD}" != "" ]]; then
+		SSHEXEC=(${SSHEXEC[@]} "-t" "${SSHREMCMD}")
+	fi
+
+	if [[ "${LC}" != "" ]]; then
+		${SSHEXEC[*]} | eval ${LC}
+	else
+		${SSHEXEC[*]}
+	fi
+
+	#-- Logging report.
+	if [ -n "${LC}" ]; then echo "------------------------------" 1>&2; fi
+		if [ -n "${S_LG}" ]; then
+			if [ -n "${S_LF}" ]; then
+
+				#- Report the log file name, if it is not zero-length. Otherwise remove the file.
+				if [ -s "${S_LF}" ]; then
+					echo "Session logged to ${S_LF}" 1>&2
+				else
+
+				#- Warn the user of zero-length log, and clear the file.
+				if [[ -n "${LC}" ]]; then
+					echo "No output logged from session. Removing ${S_LF}" 1>&2
+				fi
+				rm "${S_LF}"
+			fi
+
+		#- Warn the user that we were unable to write the session log.
+		else
+			echo -ne "WARNING: Logging is enabled, but unable to write to log." 1>&2
+			echo -e " Please verify that SSHI_LOG_LOC is correct." 1>&2
+		fi
+	fi
+
 }
 
-# vim: filetype=sh tabstop=1 expandtab
+# vim: filetype=sh tabstop=2
