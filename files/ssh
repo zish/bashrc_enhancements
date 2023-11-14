@@ -106,6 +106,22 @@ if(open(\$l,\">\",\$ARGV[0])){\$l->autoflush(1);STDOUT->autoflush(1);
 else{die(\"Problem writing to \\\"\".\$ARGV[0].\"\\\":\".\$!.\"\\n\");}
 sub out{if((length(\$b[1])>=\$mb)||(\$c eq \"\\r\"||\$c eq \"\\n\")){print \$l \$b[1];\$b[1]=undef;}}' --"
 
+#-- Determine the Python binary to use for Python stuff.
+#SSHI_PYBIN='$(if [[ $(python -V >/dev/null 2>/dev/null; echo ${$}) > 0 ]]; then echo "python";\
+#elif [[ $(python3 -V >/dev/null 2>/dev/null; echo ${$}) > 0 ]]; then echo "python3";fi)'
+
+#alias __sshi_l="echo -e 'import sys; import signal; b, mb = 1, 1000; logfile = None;
+#if not sys.argv[1:]: raise Exception( \"Not enough arguments.\" ); sys.exit( 1 );
+#def ignore_signal( signal, frame ): print( \"Ignoring Signal {:d}\".format(signal)); pass;
+#signal.signal(signal.SIGINT, ignore_signal );
+#try:
+#    logfile = open( sys.argv[1], \"w\" );
+#    logfile.flush(); sys.stdout.flush();
+#    for line in sys.stdin: sys.stdout.write(line); logfile.write(line);
+#    logfile.close();
+#except Exception as e: raise Exception( \"Problem writing to \\\"\" + sys.argv[1] + \"\\\":\" + str( e ) ); sys.exit( 1 )' | \
+#${SSHI_PYBIN} -- - "
+
 #-- Modification of anything within this section requires you
 # to reread your rc or restart bash.
 ssh () {
@@ -115,11 +131,11 @@ _sshi_debug () {
   local MSG_LVL="${1}"
   local MSG="${2}"
 
-  #- Skip debugging output when the destination file is undefined.
-  if [[ "${SSHI_DBG_DST}" != "" ]]; then return; fi
-
   #- Skip debugging output when the message debug level is less than SSHI_DBG.
   if [[ ${SSHI_DBG} -lt ${MSG_LVL} ]]; then return; fi
+
+  #- Skip debugging output when the destination file is undefined.
+  if [[ "${SSHI_DBG_DST}" != "" ]]; then return; fi
 
   echo -e "${MSG}" >> "${SSHI_DBG_DST}"
 }
@@ -371,8 +387,8 @@ _sshi_retry_task () {
 
 #-- Use Python for BASE64 encode/decode. This eliminates the need to
 # keep track of different encode/decode tools and their cmd line opts.
-local S_BE="python -c 'import sys;import base64;sys.stdout.write(base64.b64encode(\"\".join(sys.stdin)))'"
-local S_BD="python -c 'import sys;import base64;sys.stdout.write(base64.b64decode(\"\".join(sys.stdin)))'"
+local S_BE="python3 -c 'import sys;import base64;sys.stdout.write(base64.b64encode(\"\".join(sys.stdin)))'"
+local S_BD="python3 -c 'import sys;import base64;sys.stdout.write(base64.b64decode(\"\".join(sys.stdin)))'"
 
 #-- This will be populated with our "log command".
 local LC=
@@ -443,22 +459,6 @@ local S_LFM="${SSH_HOST}-$(date +'%Y-%m-%d_%H-%M-%S').log"
  }
 } 
 
-#--- TODO: Remove this after converting log alias to python.
-#- Had a problem with the embedded __sshi_l alias with older Perl versions.
-# Not going to figure it out for now.
-# We fall back to "tee -i", if the version is lower than 5.18.
-PC="perl -e 'use v5.18;' 2>/dev/null;[ \${?} -gt 0 ]&&{ echo 1>&2;
- OPERL=1;echo '**** WARNING: Perl version is earlier than 5.18.     ****' 1>&2;
- echo '**** Using tee -i for logging (NO OUTPUT FILTERING). ****' 1>&2;echo 1>&2;}"
-eval "${PC}"
-
-#--- TODO: Remove this after converting log alias to python.
-#- A log file needs to be defined to log. Also, no logging when a remote
-# SSH command was entered via CLI.
-if [[ "${S_LF}" != "" ]] && [[ "${SSHREMCMD}" == "" ]]; then
-  if [[ "${OPERL}" == "" ]]; then LC="__sshi_l ${S_LF}"; else LC="tee -i ${S_LF}"; fi
-fi
-
 #- Skip prompt and rc file shipping if requested.
 if [[ "${NOPROMPT}" != "" ]]; then unset S_F; fi
 
@@ -492,14 +492,7 @@ if [[ "${S_F}" != "" ]]; then
     local OI=${IFS}
     IFS=$'\n'
     for A in $(alias); do
-
-#--- TODO: Remove this after converting log alias to python.
-      #- Replace the __sshi_l alias, if an old Perl version was found locally.
-      if [[ "${A}" =~ ^alias\ __sshi_l ]] && [[ "${OPERL}" != "" ]]; then
-        A="alias __sshi_l='tee -i'"
-      fi
       S_A="${S_A}${A};"
-
     done
     IFS=${OI}
 
