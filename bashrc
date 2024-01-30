@@ -22,16 +22,11 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with bashrc_enhancements.  If not, see <http://www.gnu.org/licenses/>.
 
-export ENHANCEMENTS_ROOT="${HOME}/.bashrc_enhancements"
+export ENHANCEMENTS_ROOT="${ENHANCEMENTS_ROOT:-${HOME}/.bashrc_enhancements}"
 
-if [[ "${ENHANCEMENTS_ENABLED[*]}" == "" ]]; then
-  export ENHANCEMENTS_ENABLED=("addpath" "again" "command_not_found_handle" "ssh" "sudo" "update_title_bar" "tar")
-fi
+[[ -z "${ENHANCEMENTS_ENABLED[@]}" ]] && \
+	export ENHANCEMENTS_ENABLED=("addpath" "again" "ssh" "sudo")
 
 for F in ${ENHANCEMENTS_ENABLED[@]}; do
-  if [ -e ${ENHANCEMENTS_ROOT}/files/${F} ]; then
-    . ${ENHANCEMENTS_ROOT}/files/${F}
-  else
-    echo -e "Warning: bashrc_enhancement \"${F}\" not available." 1>&2
-  fi
+	[ -e ${ENHANCEMENTS_ROOT}/files/${F} ] && . ${ENHANCEMENTS_ROOT}/files/${F}
 done
