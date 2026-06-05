@@ -1,3 +1,5 @@
+## This project has been marked as read-only. No further development will be done on this project. Thanks for the support!
+
 # bashrc\_enhancements
 Some useful functions, shortcuts, and enhancements to add to your \.bashrc \(or \.bash\_profile\)\.
 
